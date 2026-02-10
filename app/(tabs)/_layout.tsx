@@ -23,8 +23,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarShowLabel: true, // Changed to true for clarity
         tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: Platform.OS === 'ios' ? 'transparent' : theme.colors.tabBar,
+          backgroundColor: theme.colors.tabBar,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: theme.colors.tabBarBorder,
           height: 60 + insets.bottom,
@@ -89,6 +88,51 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? 'people' : 'people-outline'}
               size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Analytics Tab */}
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          title: 'Analytics',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'stats-chart' : 'stats-chart-outline'}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Categories Tab */}
+      <Tabs.Screen
+        name="categories"
+        options={{
+          title: 'Categories',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'grid' : 'grid-outline'}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Expenses Tab */}
+      <Tabs.Screen
+        name="expenses"
+        options={{
+          title: 'Expenses',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'receipt' : 'receipt-outline'}
+              size={22}
               color={color}
             />
           ),

@@ -9,7 +9,11 @@ interface CustomerState {
   addCustomer: (customer: Omit<Customer, 'id' | 'totalDue'>) => Promise<void>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  getCustomer: (id: string) => Promise<Customer | null>;
   updateDue: (id: string, amountChange: number) => Promise<void>; // + adds due, - reduces due (payment)
+  getCustomersWithDues: () => Promise<Customer[]>;
+  searchCustomers: (searchTerm: string) => Promise<Customer[]>;
+  getTotalDues: () => Promise<number>;
 }
 
 export const useCustomerStore = create<CustomerState>()((set) => ({
@@ -69,6 +73,16 @@ export const useCustomerStore = create<CustomerState>()((set) => ({
     }
   },
 
+  // Get a customer by ID
+  getCustomer: async (id: string) => {
+    try {
+      return await customerRepository.findById(id);
+    } catch (error) {
+      console.error('[CustomerStore] Failed to get customer:', error);
+      return null;
+    }
+  },
+
   // Update customer due amount
   updateDue: async (id, amountChange) => {
     try {
@@ -81,6 +95,36 @@ export const useCustomerStore = create<CustomerState>()((set) => ({
     } catch (error) {
       console.error('[CustomerStore] Failed to update due:', error);
       throw error;
+    }
+  },
+
+  // Get customers with outstanding dues
+  getCustomersWithDues: async () => {
+    try {
+      return await customerRepository.getCustomersWithDues();
+    } catch (error) {
+      console.error('[CustomerStore] Failed to get customers with dues:', error);
+      return [];
+    }
+  },
+
+  // Search customers by name or phone
+  searchCustomers: async (searchTerm: string) => {
+    try {
+      return await customerRepository.search(searchTerm);
+    } catch (error) {
+      console.error('[CustomerStore] Failed to search customers:', error);
+      return [];
+    }
+  },
+
+  // Get total amount of all dues
+  getTotalDues: async () => {
+    try {
+      return await customerRepository.getTotalDues();
+    } catch (error) {
+      console.error('[CustomerStore] Failed to get total dues:', error);
+      return 0;
     }
   },
 }));

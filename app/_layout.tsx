@@ -17,7 +17,7 @@ import { ThemeProvider, useTheme } from '@/src/shared/theme';
 SplashScreen.preventAutoHideAsync();
 
 // Custom Animated Splash Screen
-function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
+export function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
   const { theme } = useTheme();
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -93,6 +93,9 @@ function RootLayoutNav() {
         const { useCustomerStore } = await import('@/src/store/customer.store');
         const { useSalesStore } = await import('@/src/store/sales.store');
         const { useAppStore } = await import('@/src/store/app.store');
+        const { useCategoryStore } = await import('@/src/store/category.store');
+        const { usePaymentStore } = await import('@/src/store/payment.store');
+        const { useExpenseStore } = await import('@/src/store/expense.store');
 
         // 1. Initialize SQLite database
         console.log('[App] Initializing database...');
@@ -113,6 +116,9 @@ function RootLayoutNav() {
           useCustomerStore.getState().hydrate(),
           useSalesStore.getState().hydrate(),
           useAppStore.getState().hydrate(),
+          useCategoryStore.getState().hydrate(),
+          usePaymentStore.getState().hydrate(),
+          useExpenseStore.getState().hydrate(),
         ]);
 
         console.log('[App] ✓ App initialization complete');

@@ -10,6 +10,9 @@ interface ProductState {
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   getProduct: (id: string) => Product | undefined;
+  searchByName: (searchTerm: string) => Promise<Product[]>;
+  getLowStock: () => Promise<Product[]>;
+  getByCategory: (categoryId: string) => Promise<Product[]>;
 }
 
 export const useProductStore = create<ProductState>()((set, get) => ({
@@ -68,4 +71,34 @@ export const useProductStore = create<ProductState>()((set, get) => ({
 
   // Get a product by ID (from in-memory state)
   getProduct: (id) => get().products.find((p) => p.id === id),
+
+  // Search products by name
+  searchByName: async (searchTerm: string) => {
+    try {
+      return await productRepository.searchByName(searchTerm);
+    } catch (error) {
+      console.error('[ProductStore] Failed to search products:', error);
+      return [];
+    }
+  },
+
+  // Get products with low stock (using their own lowStockLevel)
+  getLowStock: async () => {
+    try {
+      return await productRepository.getLowStock();
+    } catch (error) {
+      console.error('[ProductStore] Failed to get low stock products:', error);
+      return [];
+    }
+  },
+
+  // Get products by category
+  getByCategory: async (categoryId: string) => {
+    try {
+      return await productRepository.getByCategory(categoryId);
+    } catch (error) {
+      console.error('[ProductStore] Failed to get products by category:', error);
+      return [];
+    }
+  },
 }));

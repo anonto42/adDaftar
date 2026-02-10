@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Text, Modal, TextInput, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useTheme } from '@/src/shared/theme';
 import { useProductStore } from '@/src/store/product.store';
 import { useCustomerStore } from '@/src/store/customer.store';
@@ -9,6 +12,7 @@ import { Product, SaleItem } from '@/src/shared/types/shop.types';
 
 export default function SalesScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { products } = useProductStore();
   const { customers } = useCustomerStore();
   const { createSale } = useSalesStore();
@@ -82,12 +86,178 @@ export default function SalesScreen() {
 
     createSale(saleData);
     setLastSale({ ...saleData, date: new Date().toISOString(), id: 'TEMP_ID' }); // ID is actually generated in store, but this is for display
-    
+
     setCart([]);
     setCheckoutModalVisible(false);
     setSaleType('CASH');
     setSelectedCustomer(null);
     setReceiptModalVisible(true);
+  };
+
+  const generateReceiptHTML = () => {
+    if (!lastSale) return '';
+
+    const itemsHTML = lastSale.items
+      .map(
+        (item: any) => `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.productName}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.unitPrice.toFixed(2)}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.total.toFixed(2)}</td>
+        </tr>
+      `
+      )
+      .join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Receipt</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 40px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 20px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 32px;
+              color: #333;
+            }
+            .header p {
+              margin: 5px 0;
+              color: #666;
+            }
+            .info {
+              margin-bottom: 20px;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 8px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+            }
+            th {
+              background-color: #f8f9fa;
+              padding: 12px 8px;
+              text-align: left;
+              border-bottom: 2px solid #333;
+            }
+            th:nth-child(2), th:nth-child(3), th:nth-child(4) {
+              text-align: right;
+            }
+            .total-section {
+              margin-top: 20px;
+              border-top: 2px solid #333;
+              padding-top: 15px;
+            }
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              font-size: 18px;
+              font-weight: bold;
+              padding: 10px 0;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #eee;
+              color: #666;
+              font-size: 14px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>RECEIPT</h1>
+            <p>Shop Management App</p>
+          </div>
+
+          <div class="info">
+            <div class="info-row">
+              <strong>Date:</strong>
+              <span>${new Date(lastSale.date).toLocaleString()}</span>
+            </div>
+            <div class="info-row">
+              <strong>Type:</strong>
+              <span>${lastSale.type}</span>
+            </div>
+            ${
+              lastSale.customerName
+                ? `
+            <div class="info-row">
+              <strong>Customer:</strong>
+              <span>${lastSale.customerName}</span>
+            </div>
+            `
+                : ''
+            }
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Price</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHTML}
+            </tbody>
+          </table>
+
+          <div class="total-section">
+            <div class="total-row">
+              <span>TOTAL:</span>
+              <span>$${lastSale.totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>Generated by Shop Management App</p>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const downloadReceipt = async () => {
+    try {
+      const html = generateReceiptHTML();
+      const { uri } = await Print.printToFileAsync({ html });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Share Receipt',
+          UTI: 'com.hisab.rakho.pdf',
+        });
+      } else {
+        Alert.alert('Success', 'PDF saved to: ' + uri);
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      Alert.alert('Error', 'Failed to generate PDF receipt');
+    }
   };
 
   return (
@@ -108,6 +278,7 @@ export default function SalesScreen() {
           <FlatList
             data={filteredProducts}
             keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 60 + insets.bottom }}
             renderItem={({ item }) => (
               <TouchableOpacity 
                 style={[styles.productItem, { backgroundColor: theme.colors.card }]}
@@ -126,6 +297,7 @@ export default function SalesScreen() {
           <FlatList
             data={cart}
             keyExtractor={(item) => item.productId}
+            contentContainerStyle={{ paddingBottom: 60 + insets.bottom }}
             renderItem={({ item }) => (
               <View style={styles.cartItem}>
                 <View style={{flex: 1}}>
@@ -234,12 +406,22 @@ export default function SalesScreen() {
                     </>
                 )}
 
-                <TouchableOpacity 
-                    style={[styles.button, { backgroundColor: theme.colors.primary, marginTop: 20, alignSelf: 'center' }]}
-                    onPress={() => setReceiptModalVisible(false)}
-                >
-                    <Text style={{ color: 'white' }}>Close</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 20, gap: 10 }}>
+                    <TouchableOpacity
+                        style={[styles.button, { backgroundColor: '#10B981', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20 }]}
+                        onPress={downloadReceipt}
+                    >
+                        <Ionicons name="download-outline" size={20} color="white" />
+                        <Text style={{ color: 'white', fontWeight: 'bold' }}>Download PDF</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.button, { backgroundColor: theme.colors.primary, paddingHorizontal: 20 }]}
+                        onPress={() => setReceiptModalVisible(false)}
+                    >
+                        <Text style={{ color: 'white', fontWeight: 'bold' }}>Close</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
       </Modal>

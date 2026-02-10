@@ -67,7 +67,7 @@ export interface Payment {
 }
 
 // ============ Expenses ============
-export type ExpenseCategory = 'RENT' | 'UTILITIES' | 'WAGES' | 'SUPPLIES' | 'OTHER';
+export type ExpenseCategory = 'RENT' | 'UTILITIES' | 'SALARY' | 'WAGES' | 'SUPPLIES' | 'MAINTENANCE' | 'OTHER';
 
 export interface Expense {
   id: string;

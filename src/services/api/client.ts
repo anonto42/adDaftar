@@ -8,7 +8,7 @@
  */
 
 import { config } from '@/src/config';
-import { ApiError, ApiResponse, PaginationMeta, PaginationParams } from '@/src/shared/types';
+import { ApiError, ApiResponse, PaginationMeta } from '@/src/shared/types';
 
 // Request configuration
 interface RequestConfig {

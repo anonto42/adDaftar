@@ -44,7 +44,7 @@ export const Skeleton = memo(function Skeleton({
       -1,
       false
     );
-  }, []);
+  }, [translateX]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [

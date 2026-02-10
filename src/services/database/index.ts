@@ -5,11 +5,13 @@
  */
 
 import * as SQLite from 'expo-sqlite';
-import { SCHEMA_STATEMENTS } from './schema';
+import { SCHEMA_STATEMENTS, DROP_ALL_TABLES } from './schema';
 
 const DATABASE_NAME = 'shop_management.db';
 
 let db: SQLite.SQLiteDatabase | null = null;
+let writeQueue: Promise<any> = Promise.resolve();
+let initializationPromise: Promise<void> | null = null;
 
 /**
  * Get database instance (singleton)
@@ -25,24 +27,38 @@ export function getDatabase(): SQLite.SQLiteDatabase {
  * Initialize database and create tables
  */
 export async function initializeDatabase(): Promise<void> {
-  console.log('[DB] Initializing database...');
+  if (initializationPromise) return initializationPromise;
 
-  const database = getDatabase();
+  initializationPromise = (async () => {
+    const database = getDatabase();
 
-  try {
-    // Enable foreign keys
-    await database.execAsync('PRAGMA foreign_keys = ON;');
+    // Add to write queue to ensure sequential execution
+    const operation = writeQueue.then(async () => {
+      console.log('[DB] Initializing database...');
+      try {
+        // Optimization: Enable WAL mode and set busy timeout
+        await database.execAsync('PRAGMA journal_mode = WAL;');
+        await database.execAsync('PRAGMA busy_timeout = 5000;');
+        await database.execAsync('PRAGMA foreign_keys = ON;');
 
-    // Create all tables and indexes
-    for (const statement of SCHEMA_STATEMENTS) {
-      await database.execAsync(statement);
-    }
+        // Create all tables and indexes
+        for (const statement of SCHEMA_STATEMENTS) {
+          await database.execAsync(statement);
+        }
 
-    console.log('[DB] Database initialized successfully');
-  } catch (error) {
-    console.error('[DB] Failed to initialize database:', error);
-    throw error;
-  }
+        console.log('[DB] Database initialized successfully');
+      } catch (error) {
+        console.error('[DB] Failed to initialize database:', error);
+        initializationPromise = null; // Allow retry on failure
+        throw error;
+      }
+    });
+
+    writeQueue = operation.catch(() => {});
+    return operation;
+  })();
+
+  return initializationPromise;
 }
 
 /**
@@ -83,6 +99,7 @@ export async function executeQuerySingle<T = any>(
 
 /**
  * Execute a statement (INSERT, UPDATE, DELETE)
+ * Wrapped in a queue to prevent "database is locked" errors
  */
 export async function executeStatement(
   sql: string,
@@ -90,33 +107,44 @@ export async function executeStatement(
 ): Promise<SQLite.SQLiteRunResult> {
   const database = getDatabase();
 
-  try {
-    const result = await database.runAsync(sql, params);
-    return result;
-  } catch (error) {
-    console.error('[DB] Statement failed:', sql, params, error);
-    throw error;
-  }
+  // Add to write queue
+  const operation = writeQueue.then(async () => {
+    try {
+      return await database.runAsync(sql, params);
+    } catch (error) {
+      console.error('[DB] Statement failed:', sql, params, error);
+      throw error;
+    }
+  });
+
+  writeQueue = operation.catch(() => {}); // Prevent queue from breaking on error
+  return operation;
 }
 
 /**
  * Execute multiple statements in a transaction
  */
 export async function executeTransaction(
-  statements: Array<{ sql: string; params?: any[] }>
+  statements: { sql: string; params?: any[] }[]
 ): Promise<void> {
   const database = getDatabase();
 
-  try {
-    await database.withTransactionAsync(async () => {
-      for (const { sql, params = [] } of statements) {
-        await database.runAsync(sql, params);
-      }
-    });
-  } catch (error) {
-    console.error('[DB] Transaction failed:', error);
-    throw error;
-  }
+  // Add to write queue
+  const operation = writeQueue.then(async () => {
+    try {
+      await database.withTransactionAsync(async () => {
+        for (const { sql, params = [] } of statements) {
+          await database.runAsync(sql, params);
+        }
+      });
+    } catch (error) {
+      console.error('[DB] Transaction failed:', error);
+      throw error;
+    }
+  });
+
+  writeQueue = operation.catch(() => {});
+  return operation;
 }
 
 /**
@@ -127,16 +155,22 @@ export async function withTransaction<T>(
 ): Promise<T> {
   const database = getDatabase();
 
-  try {
-    let result: T;
-    await database.withTransactionAsync(async () => {
-      result = await callback();
-    });
-    return result!;
-  } catch (error) {
-    console.error('[DB] Transaction failed:', error);
-    throw error;
-  }
+  // Add to write queue
+  const operation = writeQueue.then(async () => {
+    try {
+      let result: T;
+      await database.withTransactionAsync(async () => {
+        result = await callback();
+      });
+      return result!;
+    } catch (error) {
+      console.error('[DB] Transaction failed:', error);
+      throw error;
+    }
+  });
+
+  writeQueue = operation.catch(() => {});
+  return operation;
 }
 
 /**
@@ -146,8 +180,19 @@ export function closeDatabase(): void {
   if (db) {
     db.closeSync();
     db = null;
+    initializationPromise = null;
+    writeQueue = Promise.resolve();
     console.log('[DB] Database closed');
   }
+}
+
+/**
+ * Reset database state (useful for testing or after errors)
+ */
+export function resetDatabaseState(): void {
+  initializationPromise = null;
+  writeQueue = Promise.resolve();
+  console.log('[DB] Database state reset');
 }
 
 /**
@@ -158,26 +203,25 @@ export async function dropAllTables(): Promise<void> {
 
   console.warn('[DB] Dropping all tables...');
 
-  try {
-    await database.execAsync('PRAGMA foreign_keys = OFF;');
+  // Add to write queue to prevent "database is locked" errors
+  const operation = writeQueue.then(async () => {
+    try {
+      await database.execAsync('PRAGMA foreign_keys = OFF;');
 
-    const dropStatements = [
-      'DROP TABLE IF EXISTS sale_items;',
-      'DROP TABLE IF EXISTS sales;',
-      'DROP TABLE IF EXISTS customers;',
-      'DROP TABLE IF EXISTS products;',
-      'DROP TABLE IF EXISTS app_settings;',
-    ];
+      // Use the drop statements from schema
+      for (const statement of DROP_ALL_TABLES) {
+        await database.execAsync(statement);
+      }
 
-    for (const statement of dropStatements) {
-      await database.execAsync(statement);
+      await database.execAsync('PRAGMA foreign_keys = ON;');
+
+      console.warn('[DB] All tables dropped');
+    } catch (error) {
+      console.error('[DB] Failed to drop tables:', error);
+      throw error;
     }
+  });
 
-    await database.execAsync('PRAGMA foreign_keys = ON;');
-
-    console.warn('[DB] All tables dropped');
-  } catch (error) {
-    console.error('[DB] Failed to drop tables:', error);
-    throw error;
-  }
+  writeQueue = operation.catch(() => {});
+  return operation;
 }

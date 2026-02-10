@@ -6,8 +6,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product, Customer, Sale } from '@/src/shared/types/shop.types';
-import { getDatabase } from './index';
-import { appRepository } from './repositories/app.repository';
+import { getDatabase, withTransaction } from './index';
+import { appRepository } from '@/src/features/settings';
 
 /**
  * Check if migration is needed and run it
@@ -43,10 +43,9 @@ export async function runMigrationIfNeeded(): Promise<void> {
  * Migrate all data from AsyncStorage to SQLite
  */
 async function migrateFromAsyncStorage(): Promise<void> {
-  const database = getDatabase();
-
   try {
-    await database.withTransactionAsync(async () => {
+    await withTransaction(async () => {
+      const database = getDatabase();
       // 1. Migrate products
       await migrateProducts(database);
 

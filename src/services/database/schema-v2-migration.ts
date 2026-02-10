@@ -4,8 +4,8 @@
  * Adds new columns to existing tables for enhanced analytics and features
  */
 
-import { getDatabase } from './index';
-import { appRepository } from './repositories/app.repository';
+import { getDatabase, withTransaction } from './index';
+import { appRepository } from '@/src/features/settings';
 
 export const SCHEMA_VERSION_2 = 2;
 
@@ -25,9 +25,10 @@ export async function runSchemaV2Migration(): Promise<void> {
     }
 
     console.log('[Schema V2] Starting migration to version 2...');
-    const database = getDatabase();
-
-    await database.withTransactionAsync(async () => {
+    
+    await withTransaction(async () => {
+      const database = getDatabase();
+      
       // Add new columns to products table
       await database.execAsync(`
         ALTER TABLE products ADD COLUMN category_id TEXT;

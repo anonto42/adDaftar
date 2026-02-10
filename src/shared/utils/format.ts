@@ -5,6 +5,33 @@
  */
 
 /**
+ * Format a number as currency
+ */
+export function formatCurrency(
+  amount: number, 
+  currency: 'USD' | 'BDT' | 'EUR' | 'GBP' | 'INR' | 'JPY' | 'SAR' | 'AED' = 'USD'
+): string {
+  switch (currency) {
+    case 'BDT':
+      return `৳${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    case 'EUR':
+      return `€${amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    case 'GBP':
+      return `£${amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    case 'INR':
+      return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    case 'JPY':
+      return `¥${amount.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    case 'SAR':
+      return `﷼${amount.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    case 'AED':
+      return `د.إ${amount.toLocaleString('ar-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    default:
+      return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+}
+
+/**
  * Format a number with K, M, B suffixes for large values
  */
 export function formatCount(count: number): string {

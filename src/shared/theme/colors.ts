@@ -5,26 +5,26 @@
  * glassmorphism, gradients, and next-gen aesthetics.
  */
 
-// Brand colors - gradient-ready
+// Brand colors - professional indigo-based palette
 export const brandColors = {
-  primary: '#7C3AED', // Violet
-  primaryLight: '#A78BFA',
-  primaryDark: '#5B21B6',
-  secondary: '#EC4899', // Pink
-  secondaryLight: '#F472B6',
-  secondaryDark: '#BE185D',
-  accent: '#06B6D4', // Cyan
-  accentLight: '#22D3EE',
-  accentDark: '#0891B2',
+  primary: '#4F46E5', // Indigo-600
+  primaryLight: '#818CF8', // Indigo-400
+  primaryDark: '#3730A3', // Indigo-800
+  secondary: '#10B981', // Emerald-500
+  secondaryLight: '#34D399', // Emerald-400
+  secondaryDark: '#065F46', // Emerald-800
+  accent: '#06B6D4', // Cyan-500
+  accentLight: '#22D3EE', // Cyan-400
+  accentDark: '#0891B2', // Cyan-600
 } as const;
 
 // Gradient presets
 export const gradients = {
-  primary: ['#7C3AED', '#EC4899'],
-  sunset: ['#F97316', '#EC4899', '#7C3AED'],
-  ocean: ['#06B6D4', '#7C3AED'],
-  aurora: ['#22D3EE', '#A78BFA', '#F472B6'],
-  night: ['#1E1B4B', '#312E81', '#4C1D95'],
+  primary: ['#4F46E5', '#818CF8'],
+  success: ['#10B981', '#34D399'],
+  danger: ['#EF4444', '#F87171'],
+  ocean: ['#06B6D4', '#4F46E5'],
+  night: ['#0F172A', '#1E293B'],
   glass: ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)'],
   glassDark: ['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)'],
 } as const;
@@ -32,9 +32,9 @@ export const gradients = {
 // Light theme colors
 export const lightColors = {
   // Backgrounds
-  background: '#FAFAFA',
-  backgroundSecondary: '#F5F5F5',
-  backgroundTertiary: '#EEEEEE',
+  background: '#F8FAFC', // Slate-50
+  backgroundSecondary: '#F1F5F9', // Slate-100
+  backgroundTertiary: '#E2E8F0', // Slate-200
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
 
@@ -44,16 +44,16 @@ export const lightColors = {
   glassSubtle: 'rgba(255, 255, 255, 0.5)',
 
   // Text
-  text: '#0F0F0F',
-  textSecondary: '#525252',
-  textTertiary: '#737373',
+  text: '#0F172A', // Slate-900
+  textSecondary: '#475569', // Slate-600
+  textTertiary: '#94A3B8', // Slate-400
   textInverse: '#FFFFFF',
   textOnPrimary: '#FFFFFF',
 
   // Borders
-  border: 'rgba(0, 0, 0, 0.08)',
-  borderStrong: 'rgba(0, 0, 0, 0.15)',
-  borderSubtle: 'rgba(0, 0, 0, 0.04)',
+  border: '#E2E8F0', // Slate-200
+  borderStrong: '#CBD5E1', // Slate-300
+  borderSubtle: '#F1F5F9', // Slate-100
 
   // Interactive
   primary: brandColors.primary,
@@ -63,13 +63,13 @@ export const lightColors = {
   interactivePressed: brandColors.primaryDark,
 
   // Status
-  success: '#10B981',
+  success: '#059669', // Emerald-600
   successLight: '#D1FAE5',
-  warning: '#F59E0B',
+  warning: '#D97706', // Amber-600
   warningLight: '#FEF3C7',
-  error: '#EF4444',
+  error: '#DC2626', // Red-600
   errorLight: '#FEE2E2',
-  info: '#3B82F6',
+  info: '#2563EB', // Blue-600
   infoLight: '#DBEAFE',
 
   // Social actions
@@ -79,60 +79,60 @@ export const lightColors = {
   save: '#F59E0B',
 
   // Misc
-  skeleton: '#E5E5E5',
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  shadow: 'rgba(0, 0, 0, 0.1)',
-  shadowStrong: 'rgba(0, 0, 0, 0.2)',
+  skeleton: '#E2E8F0',
+  overlay: 'rgba(15, 23, 42, 0.5)',
+  shadow: 'rgba(15, 23, 42, 0.08)',
+  shadowStrong: 'rgba(15, 23, 42, 0.12)',
 
   // Tab bar
-  tabBar: 'rgba(255, 255, 255, 0.9)',
-  tabBarBorder: 'rgba(0, 0, 0, 0.05)',
+  tabBar: '#FFFFFF',
+  tabBarBorder: '#E2E8F0',
   tabBarActive: brandColors.primary,
-  tabBarInactive: '#737373',
+  tabBarInactive: '#94A3B8',
 } as const;
 
 // Dark theme colors
 export const darkColors = {
   // Backgrounds
-  background: '#0A0A0A',
-  backgroundSecondary: '#141414',
-  backgroundTertiary: '#1F1F1F',
-  surface: '#1A1A1A',
-  surfaceElevated: '#242424',
+  background: '#020617', // Slate-950
+  backgroundSecondary: '#0F172A', // Slate-900
+  backgroundTertiary: '#1E293B', // Slate-800
+  surface: '#1E293B', // Slate-800
+  surfaceElevated: '#334155', // Slate-700
 
   // Glass effect backgrounds (darker, more dramatic)
-  glass: 'rgba(30, 30, 30, 0.7)',
-  glassStrong: 'rgba(40, 40, 40, 0.85)',
-  glassSubtle: 'rgba(20, 20, 20, 0.5)',
+  glass: 'rgba(15, 23, 42, 0.7)',
+  glassStrong: 'rgba(30, 41, 59, 0.85)',
+  glassSubtle: 'rgba(2, 6, 23, 0.5)',
 
   // Text
-  text: '#FAFAFA',
-  textSecondary: '#A3A3A3',
-  textTertiary: '#737373',
-  textInverse: '#0F0F0F',
+  text: '#F8FAFC', // Slate-50
+  textSecondary: '#94A3B8', // Slate-400
+  textTertiary: '#64748B', // Slate-500
+  textInverse: '#0F172A',
   textOnPrimary: '#FFFFFF',
 
   // Borders
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderStrong: 'rgba(255, 255, 255, 0.15)',
-  borderSubtle: 'rgba(255, 255, 255, 0.04)',
+  border: '#334155', // Slate-700
+  borderStrong: '#475569', // Slate-600
+  borderSubtle: '#1E293B', // Slate-800
 
   // Interactive
   primary: brandColors.primaryLight,
-  card: '#1A1A1A',
+  card: '#0F172A', // Slate-900
   interactive: brandColors.primaryLight,
   interactiveHover: brandColors.primary,
   interactivePressed: brandColors.primary,
 
   // Status
-  success: '#34D399',
-  successLight: 'rgba(52, 211, 153, 0.15)',
-  warning: '#FBBF24',
-  warningLight: 'rgba(251, 191, 36, 0.15)',
-  error: '#F87171',
-  errorLight: 'rgba(248, 113, 113, 0.15)',
-  info: '#60A5FA',
-  infoLight: 'rgba(96, 165, 250, 0.15)',
+  success: '#10B981', // Emerald-500
+  successLight: 'rgba(16, 185, 129, 0.15)',
+  warning: '#F59E0B', // Amber-500
+  warningLight: 'rgba(245, 158, 11, 0.15)',
+  error: '#EF4444', // Red-500
+  errorLight: 'rgba(239, 68, 68, 0.15)',
+  info: '#3B82F6', // Blue-500
+  infoLight: 'rgba(59, 130, 246, 0.15)',
 
   // Social actions
   like: '#F87171',
@@ -141,16 +141,16 @@ export const darkColors = {
   save: '#FBBF24',
 
   // Misc
-  skeleton: '#2A2A2A',
-  overlay: 'rgba(0, 0, 0, 0.7)',
-  shadow: 'rgba(0, 0, 0, 0.3)',
-  shadowStrong: 'rgba(0, 0, 0, 0.5)',
+  skeleton: '#1E293B',
+  overlay: 'rgba(2, 6, 23, 0.8)',
+  shadow: 'rgba(0, 0, 0, 0.4)',
+  shadowStrong: 'rgba(0, 0, 0, 0.6)',
 
   // Tab bar
-  tabBar: 'rgba(20, 20, 20, 0.9)',
-  tabBarBorder: 'rgba(255, 255, 255, 0.05)',
+  tabBar: '#0F172A',
+  tabBarBorder: '#1E293B',
   tabBarActive: brandColors.primaryLight,
-  tabBarInactive: '#737373',
+  tabBarInactive: '#64748B',
 } as const;
 
 export type ThemeColors = typeof lightColors;

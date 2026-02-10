@@ -1,14 +1,12 @@
 /**
  * Database Repositories
  *
- * Centralized exports for all repositories
+ * Centralized exports for all repositories redirected to features.
  */
 
-export * from './product.repository';
-export * from './customer.repository';
-export * from './sales.repository';
-export * from './app.repository';
-export * from './category.repository';
-export * from './payment.repository';
-export * from './expense.repository';
-export * from './analytics.repository';
+export { productRepository, categoryRepository } from '@/src/features/inventory';
+export { customerRepository, paymentRepository } from '@/src/features/customers';
+export { salesRepository } from '@/src/features/sales';
+export { appRepository } from '@/src/features/settings';
+export { expenseRepository } from '@/src/features/expenses';
+export { analyticsRepository } from '@/src/features/analytics';

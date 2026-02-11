@@ -4,6 +4,7 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import { useTheme } from '@/src/shared/theme';
 import { useCustomerStore, useSalesStore, usePaymentStore, useAppStore } from '@/src/store';
 import { formatCurrency } from '@/src/shared/utils/format';
+import { SearchBar } from '@/src/shared/components';
 
 export default function CustomerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -13,6 +14,7 @@ export default function CustomerDetailsScreen() {
   const { payments, addPayment } = usePaymentStore();
   const { currency } = useAppStore();
 
+  const [searchQuery, setSearchQuery] = useState('');
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
@@ -114,8 +116,19 @@ export default function CustomerDetailsScreen() {
 
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Transaction History</Text>
 
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search transactions..."
+        onClear={() => setSearchQuery('')}
+      />
+
       <FlatList
-        data={transactions}
+        data={transactions.filter(t => 
+          (t.notes && t.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (t.transactionType.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (new Date(t.date).toLocaleDateString().includes(searchQuery))
+        )}
         keyExtractor={item => item.id}
         renderItem={({ item }: { item: any }) => (
             <View style={[styles.saleItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>

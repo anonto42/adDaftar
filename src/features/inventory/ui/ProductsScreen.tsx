@@ -9,6 +9,7 @@ import { useAppStore } from '@/src/features/settings';
 import { Product } from '@/src/shared/types/shop.types';
 import { PressableScale } from '@/src/shared/components/PressableScale';
 import { formatCurrency } from '@/src/shared/utils/format';
+import { SearchBar, ScreenHeader } from '@/src/shared/components';
 
 export default function ProductsScreen() {
   const { theme } = useTheme();
@@ -132,27 +133,19 @@ export default function ProductsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: Math.max(insets.top, 20) + 16 }]}>
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Inventory</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>Products</Text>
-        </View>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="cube" size={24} color="#FFFFFF" />
-        </View>
-      </View>
+      <ScreenHeader 
+        title="Products" 
+        subtitle="Inventory" 
+        icon="cube" 
+      />
 
       {/* Search Bar */}
-      <View style={[styles.searchBar, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
-        <TextInput
-          style={[styles.searchInput, { color: theme.colors.text }]}
-          placeholder="Search products..."
-          placeholderTextColor={theme.colors.textSecondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search products..."
+        onClear={() => setSearchQuery('')}
+      />
 
       {/* Category Filter */}
       <View>
@@ -401,7 +394,8 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,

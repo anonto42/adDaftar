@@ -25,3 +25,7 @@ export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 
 export { Divider } from './Divider';
+
+export { SideTabBar } from './SideTabBar';
+
+export { SearchBar } from './SearchBar';

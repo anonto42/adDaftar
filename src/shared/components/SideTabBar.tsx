@@ -15,7 +15,7 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 
 const SIDEBAR_WIDTH = 85;
-const TAG_WIDTH = 14;
+const TAG_WIDTH = 12;
 const TAG_HEIGHT = 70;
 
 export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
@@ -145,7 +145,7 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
           tint={theme.isDark ? 'dark' : 'light'} 
           style={[
             StyleSheet.absoluteFill, 
-            { backgroundColor: theme.isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.8)' }
+            { backgroundColor: theme.isDark ? 'rgba(29, 40, 60, 0.92)' : 'rgba(255, 255, 255, 0.8)' }
           ]} 
         />
         
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   activePill: {
     position: 'absolute',
-    left: -4,
+    left: 1,
     width: 4,
     height: 24,
     borderRadius: 2,

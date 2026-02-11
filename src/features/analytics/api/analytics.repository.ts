@@ -8,6 +8,7 @@ import {
   TopProduct,
   TopCustomer,
   FinancialSummary,
+  Sale,
 } from '@/src/shared/types/shop.types';
 import { executeQuery, executeQuerySingle } from '@/src/services/database';
 
@@ -164,5 +165,18 @@ export const analyticsRepository = {
     const endOfDay = today.toISOString();
 
     return analyticsRepository.getFinancialSummary(startOfDay, endOfDay);
+  },
+
+  /**
+   * Get recent sales
+   */
+  getRecentSales: async (limit: number = 10): Promise<Sale[]> => {
+    const sql = `
+      SELECT id, date, total_amount as totalAmount, type, customer_name as customerName, notes
+      FROM sales
+      ORDER BY date DESC
+      LIMIT ?
+    `;
+    return await executeQuery<Sale>(sql, [limit]);
   },
 };

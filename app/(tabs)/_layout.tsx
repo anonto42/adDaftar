@@ -55,26 +55,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Products Tab */}
-      <Tabs.Screen
-        name="products"
-        options={{
-          title: 'Products',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'cube' : 'cube-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
       {/* Sales Tab */}
       <Tabs.Screen
         name="sales"
         options={{
-          title: 'POS',
+          title: 'Sales',
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
               name={focused ? 'cash-register' : 'cash-register'}
@@ -85,14 +70,29 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Customers Tab */}
+      {/* Expenses Tab */}
       <Tabs.Screen
-        name="customers"
+        name="expenses"
         options={{
-          title: 'Customers',
+          title: 'Expenses',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'people' : 'people-outline'}
+              name={focused ? 'receipt' : 'receipt-outline'}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Products Tab */}
+      <Tabs.Screen
+        name="products"
+        options={{
+          title: 'Products',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'cube' : 'cube-outline'}
               size={24}
               color={color}
             />
@@ -115,20 +115,21 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Expenses Tab */}
+      {/* Customers Tab */}
       <Tabs.Screen
-        name="expenses"
+        name="customers"
         options={{
-          title: 'Expenses',
+          title: 'Customers',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'receipt' : 'receipt-outline'}
-              size={22}
+              name={focused ? 'people' : 'people-outline'}
+              size={24}
               color={color}
             />
           ),
         }}
       />
+
     </Tabs>
     </View>
   );

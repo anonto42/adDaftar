@@ -31,11 +31,11 @@ function RootLayoutNav() {
         console.log('[App] Initializing database...');
         await initializeDatabase();
 
-        // 2. Run AsyncStorage → SQLite migration if needed (first launch after v1 update)
+        // 2. Run AsyncStorage → SQLite migration if needed 
         console.log('[App] Running v1 migration if needed...');
         await runMigrationIfNeeded();
 
-        // 3. Run schema v2 migration (add new columns and tables)
+        // 3. Run schema v2 migration 
         console.log('[App] Running schema v2 migration if needed...');
         await runSchemaV2Migration();
 
@@ -88,12 +88,14 @@ function RootLayoutNav() {
 
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} key={theme.isDark ? 'dark' : 'light'} />
       <Stack
         screenOptions={{
           animation: 'slide_from_right',
           headerShown: false,
           contentStyle: { backgroundColor: theme.colors.background },
+          headerStyle: { backgroundColor: theme.colors.card },
+          headerTintColor: theme.colors.text,
         }}
       >
         {/* Main app screens (protected) */}
@@ -102,6 +104,7 @@ function RootLayoutNav() {
         <Stack.Screen name="settings" options={{ presentation: 'card' }} />
         <Stack.Screen name="privacy-policy" options={{ presentation: 'card' }} />
         <Stack.Screen name="customers/[id]" options={{ presentation: 'card', headerShown: true, title: 'Customer Details' }} />
+        <Stack.Screen name="sales-history" options={{ presentation: 'card', headerShown: false }} />
       </Stack>
     </View>
   );

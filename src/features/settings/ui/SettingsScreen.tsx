@@ -7,6 +7,7 @@ import { useTheme } from '@/src/shared/theme';
 import { useAppStore } from '@/src/store';
 import { useI18n } from '@/src/shared/i18n';
 import { dropAllTables, initializeDatabase, resetDatabaseState } from '@/src/services/database';
+import { APP_CONSTANTS } from '@/src/config';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
@@ -180,7 +181,7 @@ export default function SettingsScreen() {
           <SettingItem 
             icon="information-circle-outline" 
             title="Version" 
-            value="1.0.0" 
+            value={APP_CONSTANTS.APP_VERSION} 
             showChevron={false}
           />
           <SettingItem 

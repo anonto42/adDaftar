@@ -54,7 +54,7 @@ export const featureFlags = {
 // App constants
 export const APP_CONSTANTS = {
   APP_NAME: 'SocialMedia',
-  APP_VERSION: '1.0.0',
+  APP_VERSION: '1.0.2',
   PAGINATION_LIMIT: 20,
   MAX_IMAGE_SIZE_MB: 10,
   MAX_VIDEO_SIZE_MB: 100,

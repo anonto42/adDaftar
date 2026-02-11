@@ -6,34 +6,25 @@
 
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/shared/theme';
+import { SideTabBar } from '@/src/shared/components';
 
 export default function TabLayout() {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: theme.colors.tabBarActive,
-        tabBarInactiveTintColor: theme.colors.tabBarInactive,
-        headerShown: false,
-        tabBarShowLabel: true, // Changed to true for clarity
-        tabBarStyle: {
-          backgroundColor: theme.colors.tabBar,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: theme.colors.tabBarBorder,
-          height: 60 + insets.bottom,
-          paddingBottom: insets.bottom,
-          paddingTop: 8,
-        },
-        tabBarBackground: () =>
-          null,
-      }}
-    >
+    <View style={styles.container}>
+      <Tabs
+        tabBar={(props) => <SideTabBar {...props} />}
+        screenOptions={{
+          tabBarActiveTintColor: theme.colors.tabBarActive,
+          tabBarInactiveTintColor: theme.colors.tabBarInactive,
+          headerShown: false,
+          tabBarShowLabel: true,
+        }}
+      >
       {/* Home Tab */}
       <Tabs.Screen
         name="index"
@@ -43,6 +34,21 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
               size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      
+      {/* Analytics Tab */}
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          title: 'Analytics',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'stats-chart' : 'stats-chart-outline'}
+              size={22}
               color={color}
             />
           ),
@@ -94,21 +100,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Analytics Tab */}
-      <Tabs.Screen
-        name="analytics"
-        options={{
-          title: 'Analytics',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'stats-chart' : 'stats-chart-outline'}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
-
       {/* Categories Tab */}
       <Tabs.Screen
         name="categories"
@@ -139,5 +130,13 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+});

@@ -2,10 +2,10 @@
   "expo": {
     "name": "Hisab Rakho",
     "slug": "mobile",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "Hisab rakho",
+    "scheme": "hisabrakho",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -55,6 +55,7 @@
       "eas": {
         "projectId": "e43adb98-a314-4436-9193-525a37b97a05"
       }
-    }
+    },
+    "owner": "anontom90@gmail.com"
   }
 }

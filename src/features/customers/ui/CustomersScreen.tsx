@@ -8,16 +8,18 @@ import { useCustomerStore } from '../model/customer.store';
 import { usePaymentStore } from '../model/payment.store';
 import { useAppStore } from '@/src/features/settings';
 import { Customer } from '@/src/shared/types/shop.types';
-import { PressableScale } from '@/src/shared/components/PressableScale';
 import { formatCurrency } from '@/src/shared/utils/format';
+import { PressableScale, SearchBar, ScreenHeader } from '@/src/shared/components';
 
 export default function CustomersScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { customers, addCustomer, updateCustomer, updateDue } = useCustomerStore();
+  const { customers, addCustomer, updateCustomer, updateDue, deleteCustomer } = useCustomerStore();
   const { addPayment } = usePaymentStore();
   const { currency } = useAppStore();
+  
+  const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -28,6 +30,33 @@ export default function CustomersScreen() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
+
+  const handleDeleteCustomer = (customer: Customer) => {
+    const hasDue = customer.totalDue > 0;
+    const message = hasDue 
+      ? `This customer has an outstanding due of ${formatCurrency(customer.totalDue, currency)}. Deleting them will remove this amount from all calculations and reports. Are you sure?`
+      : `Are you sure you want to delete ${customer.name}? This action cannot be undone.`;
+
+    Alert.alert(
+      'Confirm Delete',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCustomer(customer.id);
+              Alert.alert('Success', 'Customer deleted successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete customer');
+            }
+          }
+        },
+      ]
+    );
+  };
 
   const handleOpenModal = (customer?: Customer) => {
     if (customer) {
@@ -106,18 +135,24 @@ export default function CustomersScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: Math.max(insets.top, 20) + 16 }]}>
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Relationship</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>Customers</Text>
-        </View>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="people" size={24} color="#FFFFFF" />
-        </View>
-      </View>
+      <ScreenHeader 
+        title="Customers" 
+        subtitle="Relationship" 
+        icon="people" 
+      />
+
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search by name or phone..."
+        onClear={() => setSearchQuery('')}
+      />
 
       <FlatList
-        data={customers}
+        data={customers.filter(c => 
+          c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          (c.phone && c.phone.includes(searchQuery))
+        )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
         showsVerticalScrollIndicator={false}
@@ -150,6 +185,9 @@ export default function CustomersScreen() {
               )}
               <TouchableOpacity onPress={() => handleOpenModal(item)} style={styles.actionButton}>
                 <Ionicons name="pencil" size={20} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteCustomer(item)} style={[styles.actionButton, { backgroundColor: theme.colors.error + '10' }]}>
+                <Ionicons name="trash" size={20} color={theme.colors.error} />
               </TouchableOpacity>
             </View>
           </PressableScale>

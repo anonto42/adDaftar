@@ -29,3 +29,7 @@ export { Divider } from './Divider';
 export { SideTabBar } from './SideTabBar';
 
 export { SearchBar } from './SearchBar';
+
+export { PressableScale } from './PressableScale';
+
+export { ScreenHeader } from './ScreenHeader';

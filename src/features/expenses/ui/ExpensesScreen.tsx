@@ -16,7 +16,7 @@ import { useTheme } from '@/src/shared/theme';
 import { useExpenseStore } from '../model/expense.store';
 import { useAppStore } from '@/src/features/settings';
 import { Expense, ExpenseCategory } from '@/src/shared/types/shop.types';
-import { PressableScale } from '@/src/shared/components/PressableScale';
+import { PressableScale, ScreenHeader } from '@/src/shared/components';
 import { formatCurrency } from '@/src/shared/utils/format';
 
 const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; icon: string }[] = [
@@ -137,15 +137,11 @@ export default function ExpensesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16 }]}>
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Cash Out</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>Expenses</Text>
-        </View>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="receipt" size={24} color="#FFFFFF" />
-        </View>
-      </View>
+      <ScreenHeader 
+        title="Expenses" 
+        subtitle="Cash Out" 
+        icon="receipt" 
+      />
 
       {/* Monthly Total Card */}
       <View style={[styles.totalCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>

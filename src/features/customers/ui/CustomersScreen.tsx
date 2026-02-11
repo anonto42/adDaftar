@@ -50,6 +50,7 @@ export default function CustomersScreen() {
               await deleteCustomer(customer.id);
               Alert.alert('Success', 'Customer deleted successfully');
             } catch (error) {
+              console.log(error)
               Alert.alert('Error', 'Failed to delete customer');
             }
           }

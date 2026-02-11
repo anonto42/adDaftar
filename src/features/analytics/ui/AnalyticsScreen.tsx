@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Text, ScrollView, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/shared/theme';
 import { useAppStore } from '@/src/features/settings';
 import { analyticsRepository } from '../api/analytics.repository';

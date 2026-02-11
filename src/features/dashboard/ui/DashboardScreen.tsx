@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/shared/theme';
 import { useCustomerStore } from '@/src/features/customers';
@@ -10,15 +9,15 @@ import { useProductStore } from '@/src/features/inventory';
 import { useAppStore } from '@/src/features/settings';
 import { useI18n } from '@/src/shared/i18n';
 import { analyticsRepository } from '@/src/features/analytics';
-import { SalesTrend, Product } from '@/src/shared/types/shop.types';
+import { SalesTrend, Product, Sale } from '@/src/shared/types/shop.types';
 import { formatCurrency } from '@/src/shared/utils/format';
+import { ScreenHeader } from '@/src/shared/components';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { getTotalDues } = useCustomerStore();
   const { products } = useProductStore();
   const { currency } = useAppStore();
@@ -29,6 +28,7 @@ export default function DashboardScreen() {
   const [totalDue, setTotalDue] = useState(0);
   const [salesTrends, setSalesTrends] = useState<SalesTrend[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
+  const [recentSales, setRecentSales] = useState<Sale[]>([]);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -48,6 +48,10 @@ export default function DashboardScreen() {
       // Get low stock products
       const lowStock = await analyticsRepository.getLowStockProducts();
       setLowStockProducts(lowStock.slice(0, 5)); // Show top 5
+
+      // Get recent sales
+      const recent = await analyticsRepository.getRecentSales(5);
+      setRecentSales(recent);
     } catch (error) {
       console.error('[Dashboard] Failed to load data:', error);
     }
@@ -61,22 +65,23 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={{ paddingBottom: 32 + insets.bottom, paddingTop: insets.top + 16 }}
+      style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16 }]}
+      contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Overview</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>{t('dashboard')}</Text>
-        </View>
-        <TouchableOpacity 
-          style={[styles.settingsButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
-          onPress={() => router.push('/settings')}
-        >
-          <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader 
+        title={t('dashboard')} 
+        subtitle="Overview"
+        icon='home' 
+        // rightElement={
+        //   <TouchableOpacity 
+        //     style={[styles.settingsButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+        //     onPress={() => router.push('/settings')}
+        //   >
+        //     <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
+        //   </TouchableOpacity>
+        // }
+      />
 
       {/* Top Stats Row */}
       <View style={styles.statsContainer}>
@@ -148,6 +153,45 @@ export default function DashboardScreen() {
               borderRadius: 16
             }}
           />
+        </View>
+      )}
+
+      {/* Recent Sales */}
+      {recentSales.length > 0 && (
+        <View style={{ marginTop: 24 }}>
+          <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
+            Recent Transactions
+          </Text>
+          {recentSales.map((sale) => (
+            <View
+              key={sale.id}
+              style={[styles.transactionItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+            >
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: 'bold' }}>
+                    {sale.customerName || 'Walking Customer'}
+                  </Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: 'bold', fontVariant: ['tabular-nums'] }}>
+                    {formatCurrency(sale.totalAmount, currency)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                    {new Date(sale.date).toLocaleDateString()} • {sale.type}
+                  </Text>
+                  {sale.notes && (
+                    <View style={styles.noteIndicator}>
+                      <Ionicons name="document-text-outline" size={14} color={theme.colors.textTertiary} />
+                      <Text style={{ color: theme.colors.textTertiary, fontSize: 11, marginLeft: 4 }} numberOfLines={1}>
+                        {sale.notes}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+          ))}
         </View>
       )}
 
@@ -244,6 +288,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   sectionHeader: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  transactionItem: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  noteIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 0.7,
+    justifyContent: 'flex-end',
+  },
   alertItem: {
     padding: 16,
     borderRadius: 12,

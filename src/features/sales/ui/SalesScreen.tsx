@@ -12,6 +12,8 @@ import { useAppStore } from '@/src/features/settings';
 import { Product, SaleItem } from '@/src/shared/types/shop.types';
 import { PressableScale } from '@/src/shared/components/PressableScale';
 import { formatCurrency } from '@/src/shared/utils/format';
+import { SearchBar, ScreenHeader } from '@/src/shared/components';
+import { router } from 'expo-router';
 
 export default function SalesScreen() {
   const { theme } = useTheme();
@@ -23,13 +25,22 @@ export default function SalesScreen() {
 
   const [cart, setCart] = useState<SaleItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [saleType, setSaleType] = useState<'CASH' | 'DUE'>('CASH');
+  const [notes, setNotes] = useState('');
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [products, searchQuery]);
+
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => 
+      c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+      (c.phone && c.phone.includes(customerSearchQuery))
+    );
+  }, [customers, customerSearchQuery]);
 
   const addToCart = (product: Product) => {
     setCart(currentCart => {
@@ -61,7 +72,7 @@ export default function SalesScreen() {
   };
 
   const removeFromCart = (productId: string) => {
-      setCart(currentCart => currentCart.filter(item => item.productId !== productId));
+    setCart(currentCart => currentCart.filter(item => item.productId !== productId));
   };
 
   const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
@@ -85,16 +96,18 @@ export default function SalesScreen() {
       totalAmount,
       type: saleType,
       customerId: selectedCustomer || undefined,
-      customerName: selectedCustomer ? customers.find(c => c.id === selectedCustomer)?.name : undefined
+      customerName: selectedCustomer ? customers.find(c => c.id === selectedCustomer)?.name : undefined,
+      notes: notes.trim() || undefined
     };
 
     createSale(saleData);
-    setLastSale({ ...saleData, date: new Date().toISOString(), id: 'TEMP_ID' }); // ID is actually generated in store, but this is for display
+    setLastSale({ ...saleData, date: new Date().toISOString(), id: 'TEMP_ID' }); 
 
     setCart([]);
     setCheckoutModalVisible(false);
     setSaleType('CASH');
     setSelectedCustomer(null);
+    setNotes('');
     setReceiptModalVisible(true);
   };
 
@@ -269,27 +282,26 @@ export default function SalesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: Math.max(insets.top, 20) + 16, paddingBottom: insets.bottom + 16 }]}>
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Point of Sale</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>POS</Text>
-        </View>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="cash" size={24} color="#FFFFFF" />
-        </View>
-      </View>
+      <ScreenHeader 
+        title="POS" 
+        subtitle="Point of Sale" 
+        rightElement={
+          <TouchableOpacity 
+            style={[styles.historyButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+            onPress={() => router.push('/sales-history')}
+          >
+            <Ionicons name="time-outline" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.searchContainer}>
-        <View style={[styles.searchBar, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-          <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
-          <TextInput
-            style={[styles.searchInput, { color: theme.colors.text }]}
-            placeholder="Search Products..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search products..."
+          onClear={() => setSearchQuery('')}
+        />
       </View>
 
       <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -383,7 +395,38 @@ export default function SalesScreen() {
               </Text>
             </View>
             
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Payment Method</Text>
+            {/* Customer Selection with Search */}
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Select Customer {saleType === 'DUE' ? '(Required)' : '(Optional)'}</Text>
+            <SearchBar
+              value={customerSearchQuery}
+              onChangeText={setCustomerSearchQuery}
+              placeholder="Search customer..."
+              onClear={() => setCustomerSearchQuery('')}
+            />
+            <View style={{ maxHeight: 150, marginBottom: 16 }}>
+                <FlatList 
+                    data={filteredCustomers}
+                    keyExtractor={item => item.id}
+                    showsVerticalScrollIndicator={false}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity 
+                            style={[
+                                styles.customerItem, 
+                                selectedCustomer === item.id && { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary }
+                            ]}
+                            onPress={() => setSelectedCustomer(selectedCustomer === item.id ? null : item.id)}
+                        >
+                            <Text style={{ color: selectedCustomer === item.id ? theme.colors.primary : theme.colors.text, fontWeight: selectedCustomer === item.id ? 'bold' : '400' }}>
+                              {item.name}
+                            </Text>
+                            {selectedCustomer === item.id && <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />}
+                        </TouchableOpacity>
+                    )}
+                    ListEmptyComponent={<Text style={{ textAlign: 'center', color: theme.colors.textTertiary, padding: 10 }}>No customers found</Text>}
+                />
+            </View>
+
+            <Text style={[styles.label, { color: theme.colors.textSecondary, marginTop: 0 }]}>Payment Method</Text>
             <View style={styles.typeSelector}>
                 <TouchableOpacity 
                     style={[styles.typeButton, saleType === 'CASH' && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
@@ -399,33 +442,14 @@ export default function SalesScreen() {
                 </TouchableOpacity>
             </View>
 
-            {saleType === 'DUE' && (
-                <View style={{ maxHeight: 200, marginTop: 16 }}>
-                    <Text style={[styles.label, { color: theme.colors.textSecondary, marginTop: 0 }]}>Select Customer</Text>
-                    <FlatList 
-                        data={customers}
-                        keyExtractor={item => item.id}
-                        showsVerticalScrollIndicator={false}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity 
-                                style={[
-                                    styles.customerItem, 
-                                    selectedCustomer === item.id && { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary }
-                                ]}
-                                onPress={() => setSelectedCustomer(item.id)}
-                            >
-                                <Text style={{ color: selectedCustomer === item.id ? theme.colors.primary : theme.colors.text, fontWeight: selectedCustomer === item.id ? 'bold' : '400' }}>
-                                  {item.name}
-                                </Text>
-                                {selectedCustomer === item.id && <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />}
-                            </TouchableOpacity>
-                        )}
-                    />
-                </View>
-            )}
-
             <View style={styles.modalActions}>
-              <TouchableOpacity onPress={() => setCheckoutModalVisible(false)} style={styles.button}>
+              <TouchableOpacity 
+                onPress={() => {
+                  setCheckoutModalVisible(false);
+                  setCustomerSearchQuery('');
+                }} 
+                style={styles.button}
+              >
                 <Text style={{ color: theme.colors.text, fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={confirmSale} style={[styles.button, { backgroundColor: theme.colors.primary }]}>
@@ -512,6 +536,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
+  },
+  historyButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   greeting: { fontSize: 14, fontWeight: '500', marginBottom: 4 },
   header: { fontSize: 28, fontWeight: 'bold' },

@@ -8,7 +8,7 @@ import { useAppStore } from '@/src/features/settings';
 import { analyticsRepository } from '../api/analytics.repository';
 import { expenseRepository } from '@/src/features/expenses';
 import { SalesTrend, TopProduct, TopCustomer, FinancialSummary } from '@/src/shared/types/shop.types';
-import { PressableScale } from '@/src/shared/components/PressableScale';
+import { PressableScale, ScreenHeader } from '@/src/shared/components';
 import { formatCurrency } from '@/src/shared/utils/format';
 
 const screenWidth = Dimensions.get('window').width;
@@ -87,19 +87,15 @@ export default function AnalyticsScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={{ paddingBottom: 32 + insets.bottom, paddingTop: insets.top + 16 }}
+      style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16 }]}
+      contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Performance</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>Analytics</Text>
-        </View>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="stats-chart" size={24} color="#FFFFFF" />
-        </View>
-      </View>
+      <ScreenHeader 
+        title="Analytics" 
+        subtitle="Performance" 
+        icon="stats-chart" 
+      />
 
       {/* Period Selector */}
       <View style={styles.periodSelector}>

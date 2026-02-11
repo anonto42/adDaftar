@@ -15,7 +15,7 @@ import { useTheme } from '@/src/shared/theme';
 import { useCategoryStore } from '../model/category.store';
 import { useProductStore } from '../model/product.store';
 import { Category } from '@/src/shared/types/shop.types';
-import { PressableScale } from '@/src/shared/components/PressableScale';
+import { PressableScale, SearchBar, ScreenHeader } from '@/src/shared/components';
 
 // Common icons for categories
 const CATEGORY_ICONS = [
@@ -36,6 +36,7 @@ export default function CategoriesScreen() {
     useCategoryStore();
   const { products } = useProductStore();
 
+  const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [productCounts, setProductCounts] = useState<Record<string, number>>({});
@@ -105,18 +106,21 @@ export default function CategoriesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16 }]}>
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Organization</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>Categories</Text>
-        </View>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="grid" size={24} color="#FFFFFF" />
-        </View>
-      </View>
+      <ScreenHeader 
+        title="Categories" 
+        subtitle="Organization" 
+        icon="grid" 
+      />
+
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search categories..."
+        onClear={() => setSearchQuery('')}
+      />
 
       <FlatList
-        data={categories}
+        data={categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
         showsVerticalScrollIndicator={false}

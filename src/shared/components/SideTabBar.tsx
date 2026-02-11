@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
 import { useTheme } from '../theme';
@@ -11,32 +11,34 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { useRouter } from 'expo-router';
 
-const SIDEBAR_WIDTH = 80;
-const TAG_WIDTH = 12;
-const TAG_HEIGHT = 80;
+const SIDEBAR_WIDTH = 85;
+const TAG_WIDTH = 14;
+const TAG_HEIGHT = 70;
 
 export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   
-  // Animation value: 0 is closed, 1 is open
   const animation = useSharedValue(0);
 
   const toggleSidebar = useCallback(() => {
     const newValue = isOpen ? 0 : 1;
     animation.value = withSpring(newValue, {
       damping: 40,
-      stiffness: 150,
+      stiffness: 90,
     });
     setIsOpen(!isOpen);
-  }, [isOpen]);
+  }, [isOpen, animation]);
 
   const closeSidebar = useCallback(() => {
     animation.value = withSpring(0);
     setIsOpen(false);
-  }, []);
+  }, [animation]);
 
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
@@ -57,117 +59,131 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
 
   const animatedOverlayStyle = useAnimatedStyle(() => {
     return {
-      opacity: interpolate(animation.value, [0, 1], [0, 0.5]),
+      opacity: interpolate(animation.value, [0, 1], [0, 0.4]),
       display: animation.value > 0 ? 'flex' : 'none',
     };
   });
 
+  const renderTab = (route: any, index: number, isSettings = false) => {
+    const { options } = descriptors[route.key] || {};
+    const isFocused = isSettings ? false : state.index === index;
+
+    const onPress = () => {
+      if (isSettings) {
+        router.push('/settings');
+      } else {
+        const event = navigation.emit({
+          type: 'tabPress',
+          target: route.key,
+          canPreventDefault: true,
+        });
+
+        if (!isFocused && !event.defaultPrevented) {
+          navigation.navigate(route.name);
+        }
+      }
+      closeSidebar();
+    };
+
+    return (
+      <TouchableOpacity
+        key={route.key}
+        onPress={onPress}
+        activeOpacity={0.7}
+        style={[
+          styles.tabItem,
+          isFocused && { backgroundColor: theme.colors.primary + '15' }
+        ]}
+      >
+        <View style={styles.iconContainer}>
+          {options?.tabBarIcon ? options.tabBarIcon({
+            focused: isFocused,
+            color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
+            size: 24
+          }) : (
+            <Ionicons 
+              name={isSettings ? "settings-outline" : "help-circle-outline"} 
+              size={24} 
+              color={isFocused ? theme.colors.primary : theme.colors.textSecondary} 
+            />
+          )}
+        </View>
+        <Text
+          style={[
+            styles.label,
+            { 
+              color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
+              fontWeight: isFocused ? '700' : '500',
+            }
+          ]}
+          numberOfLines={1}
+        >
+          {options?.title || (isSettings ? 'Settings' : route.name)}
+        </Text>
+        {isFocused && <View style={[styles.activePill, { backgroundColor: theme.colors.primary }]} />}
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <>
-      {/* Overlay to close when clicking outside */}
       <Animated.View style={[styles.overlay, animatedOverlayStyle]}>
         <Pressable style={styles.flex} onPress={closeSidebar} />
       </Animated.View>
 
-      {/* Toggle Tag - Now a thin bar in the middle */}
       <Animated.View style={[styles.tagContainer, animatedTagStyle]}>
         <TouchableOpacity 
           onPress={toggleSidebar}
-          activeOpacity={0.7}
-          style={[
-            styles.tag, 
-            { 
-              backgroundColor: theme.colors.primary,
-              shadowColor: theme.colors.primary,
-            }
-          ]}
+          activeOpacity={0.8}
+          style={[styles.tag, { backgroundColor: theme.colors.primary }]}
         />
       </Animated.View>
 
-      <Animated.View style={[
-        styles.container, 
-        { 
-          backgroundColor: theme.colors.tabBar,
-          borderRightWidth: StyleSheet.hairlineWidth,
-          borderRightColor: theme.colors.tabBarBorder,
-          paddingTop: insets.top + 10,
-          paddingBottom: insets.bottom,
-        },
-        animatedContainerStyle
-      ]}>
-        {/* Close Area at top of sidebar */}
-        <TouchableOpacity onPress={closeSidebar} style={styles.closeButton}>
-          <Ionicons name="chevron-back" size={24} color={theme.colors.tabBarActive} />
-        </TouchableOpacity>
+      <Animated.View style={[styles.container, animatedContainerStyle]}>
+        <BlurView 
+          intensity={80} 
+          tint={theme.isDark ? 'dark' : 'light'} 
+          style={[
+            StyleSheet.absoluteFill, 
+            { backgroundColor: theme.isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.8)' }
+          ]} 
+        />
+        
+        <View style={[styles.innerContainer, { paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom, 20) }]}>
+          <TouchableOpacity onPress={closeSidebar} style={styles.closeButton}>
+            <Ionicons name="chevron-back" size={26} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {state.routes.map((route, index) => {
-            const { options } = descriptors[route.key];
-            const isFocused = state.index === index;
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollContent}
+            style={styles.mainScroll}
+          >
+            {state.routes.filter(r => r.name !== 'settings').map((route, idx) => {
+              const actualIndex = state.routes.findIndex(r => r.name === route.name);
+              return renderTab(route, actualIndex);
+            })}
+          </ScrollView>
 
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-              
-              closeSidebar();
-            };
-
-            return (
-              <TouchableOpacity
-                key={route.key}
-                onPress={onPress}
-                style={[
-                  styles.tabItem,
-                  isFocused && { backgroundColor: theme.colors.primary + '15' }
-                ]}
-              >
-                <View style={styles.iconContainer}>
-                  {options.tabBarIcon && options.tabBarIcon({
-                    focused: isFocused,
-                    color: isFocused ? theme.colors.tabBarActive : theme.colors.tabBarInactive,
-                    size: 24
-                  })}
-                </View>
-                <Text
-                  style={[
-                    styles.label,
-                    { 
-                      color: isFocused ? theme.colors.tabBarActive : theme.colors.tabBarInactive,
-                      fontSize: 10,
-                    }
-                  ]}
-                  numberOfLines={1}
-                >
-                  {options.title || route.name}
-                </Text>
-                {isFocused && <View style={[styles.activeIndicator, { backgroundColor: theme.colors.primary }]} />}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+          <View style={styles.footerContainer}>
+            <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+            {renderTab({ key: 'manual-settings', name: 'settings' }, -1, true)}
+          </View>
+        </View>
       </Animated.View>
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
+  flex: { flex: 1 },
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'black',
+    backgroundColor: '#000',
     zIndex: 99,
   },
   container: {
@@ -177,63 +193,81 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: SIDEBAR_WIDTH,
     zIndex: 101,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    overflow: 'hidden',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255, 255, 255, 0.26)',
+  },
+  innerContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   closeButton: {
-    height: 40,
+    height: 50,
+    width: SIDEBAR_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 10,
   },
   tagContainer: {
     position: 'absolute',
     left: 0,
-    top: '40%', // Centered vertically
+    top: '42%',
     width: TAG_WIDTH,
     height: TAG_HEIGHT,
-    justifyContent: 'center',
     zIndex: 100,
   },
   tag: {
     width: TAG_WIDTH,
     height: TAG_HEIGHT,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-    elevation: 4,
-    shadowOffset: { width: 2, height: 0 },
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 3, height: 0 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
+    shadowRadius: 5,
+  },
+  mainScroll: {
+    flex: 1,
+    width: '100%',
   },
   scrollContent: {
     alignItems: 'center',
     paddingVertical: 10,
   },
   tabItem: {
-    width: 70,
-    height: 70,
+    width: 68,
+    height: 68,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
-    marginVertical: 4,
+    borderRadius: 16,
+    marginVertical: 6,
     position: 'relative',
   },
   iconContainer: {
     marginBottom: 4,
   },
   label: {
-    fontWeight: '600',
+    fontSize: 10,
     textAlign: 'center',
   },
-  activeIndicator: {
+  activePill: {
     position: 'absolute',
-    left: 0,
+    left: -4,
     width: 4,
-    height: 30,
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
-  }
+    height: 24,
+    borderRadius: 2,
+  },
+  footerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  divider: {
+    width: 30,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 15,
+    opacity: 0.5,
+  },
 });

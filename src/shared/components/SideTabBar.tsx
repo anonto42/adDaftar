@@ -135,6 +135,7 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
         <TouchableOpacity 
           onPress={toggleSidebar}
           activeOpacity={0.8}
+          hitSlop={{ top: 20, bottom: 20, left: 10, right: 40 }}
           style={[styles.tag, { backgroundColor: theme.colors.primary }]}
         />
       </Animated.View>

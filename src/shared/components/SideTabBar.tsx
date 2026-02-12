@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
 import { useTheme } from '../theme';
@@ -9,11 +9,14 @@ import Animated, {
   withSpring, 
   useSharedValue,
   interpolate,
+  runOnJS,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SIDEBAR_WIDTH = 85;
 const TAG_WIDTH = 12;
 const TAG_HEIGHT = 70;
@@ -25,6 +28,11 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
   const [isOpen, setIsOpen] = useState(false);
   
   const animation = useSharedValue(0);
+
+  // Helper to sync React state from Reanimated thread
+  const updateState = (open: boolean) => {
+    setIsOpen(open);
+  };
 
   const toggleSidebar = useCallback(() => {
     const newValue = isOpen ? 0 : 1;
@@ -40,29 +48,43 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
     setIsOpen(false);
   }, [animation]);
 
-  const animatedContainerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: interpolate(animation.value, [0, 1], [-SIDEBAR_WIDTH, 0]) }
-      ],
-    };
-  });
+  // --- Gesture Logic ---
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      // Only allow activation if sidebar is closed & touch starts in left 50% 
+      // OR if sidebar is already open (to swipe it closed)
+      if (!isOpen && e.startLocationX > SCREEN_WIDTH * 0.5) return;
 
-  const animatedTagStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: interpolate(animation.value, [0, 1], [0, SIDEBAR_WIDTH]) },
-      ],
-      opacity: interpolate(animation.value, [0, 0.1], [1, 0]),
-    };
-  });
+      const progress = isOpen 
+        ? 1 + e.translationX / SIDEBAR_WIDTH 
+        : e.translationX / SIDEBAR_WIDTH;
+      
+      animation.value = Math.min(Math.max(progress, 0), 1);
+    })
+    .onEnd((e) => {
+      // Snap logic: Open if swiped > 40px or fast velocity
+      if (e.translationX > 40 || e.velocityX > 500) {
+        animation.value = withSpring(1);
+        runOnJS(updateState)(true);
+      } else {
+        animation.value = withSpring(0);
+        runOnJS(updateState)(false);
+      }
+    });
 
-  const animatedOverlayStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(animation.value, [0, 1], [0, 0.4]),
-      display: animation.value > 0 ? 'flex' : 'none',
-    };
-  });
+  const animatedContainerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(animation.value, [0, 1], [-SIDEBAR_WIDTH, 0]) }]
+  }));
+
+  const animatedTagStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(animation.value, [0, 1], [0, SIDEBAR_WIDTH]) }],
+    opacity: interpolate(animation.value, [0, 0.1], [1, 0]),
+  }));
+
+  const animatedOverlayStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(animation.value, [0, 1], [0, 0.4]),
+    display: animation.value > 0 ? 'flex' : 'none',
+  }));
 
   const renderTab = (route: any, index: number, isSettings = false) => {
     const { options } = descriptors[route.key] || {};
@@ -126,53 +148,56 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
   };
 
   return (
-    <>
-      <Animated.View style={[styles.overlay, animatedOverlayStyle]}>
-        <Pressable style={styles.flex} onPress={closeSidebar} />
-      </Animated.View>
+    <GestureDetector gesture={panGesture}>
+      {/* box-none ensures the container doesn't block touches to the main screen content */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <Animated.View style={[styles.overlay, animatedOverlayStyle]}>
+          <Pressable style={styles.flex} onPress={closeSidebar} />
+        </Animated.View>
 
-      <Animated.View style={[styles.tagContainer, animatedTagStyle]}>
-        <TouchableOpacity 
-          onPress={toggleSidebar}
-          activeOpacity={0.8}
-          hitSlop={{ top: 20, bottom: 20, left: 10, right: 40 }}
-          style={[styles.tag, { backgroundColor: theme.colors.primary }]}
-        />
-      </Animated.View>
+        <Animated.View style={[styles.tagContainer, animatedTagStyle]}>
+          <TouchableOpacity 
+            onPress={toggleSidebar}
+            activeOpacity={0.8}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 60 }}
+            style={[styles.tag, { backgroundColor: theme.colors.primary }]}
+          />
+        </Animated.View>
 
-      <Animated.View style={[styles.container, animatedContainerStyle]}>
-        <BlurView 
-          intensity={80} 
-          tint={theme.isDark ? 'dark' : 'light'} 
-          style={[
-            StyleSheet.absoluteFill, 
-            { backgroundColor: theme.isDark ? 'rgba(29, 40, 60, 0.92)' : 'rgba(255, 255, 255, 0.8)' }
-          ]} 
-        />
-        
-        <View style={[styles.innerContainer, { paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <TouchableOpacity onPress={closeSidebar} style={styles.closeButton}>
-            <Ionicons name="chevron-back" size={26} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+        <Animated.View style={[styles.container, animatedContainerStyle]}>
+          <BlurView 
+            intensity={80} 
+            tint={theme.isDark ? 'dark' : 'light'} 
+            style={[
+              StyleSheet.absoluteFill, 
+              { backgroundColor: theme.isDark ? 'rgba(29, 40, 60, 0.92)' : 'rgba(255, 255, 255, 0.8)' }
+            ]} 
+          />
+          
+          <View style={[styles.innerContainer, { paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom, 20) }]}>
+            <TouchableOpacity onPress={closeSidebar} style={styles.closeButton}>
+              <Ionicons name="chevron-back" size={26} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
 
-          <ScrollView 
-            showsVerticalScrollIndicator={false} 
-            contentContainerStyle={styles.scrollContent}
-            style={styles.mainScroll}
-          >
-            {state.routes.filter(r => r.name !== 'settings').map((route, idx) => {
-              const actualIndex = state.routes.findIndex(r => r.name === route.name);
-              return renderTab(route, actualIndex);
-            })}
-          </ScrollView>
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              contentContainerStyle={styles.scrollContent}
+              style={styles.mainScroll}
+            >
+              {state.routes.filter(r => r.name !== 'settings').map((route) => {
+                const actualIndex = state.routes.findIndex(r => r.name === route.name);
+                return renderTab(route, actualIndex);
+              })}
+            </ScrollView>
 
-          <View style={styles.footerContainer}>
-            <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-            {renderTab({ key: 'manual-settings', name: 'settings' }, -1, true)}
+            <View style={styles.footerContainer}>
+              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+              {renderTab({ key: 'manual-settings', name: 'settings' }, -1, true)}
+            </View>
           </View>
-        </View>
-      </Animated.View>
-    </>
+        </Animated.View>
+      </View>
+    </GestureDetector>
   );
 };
 

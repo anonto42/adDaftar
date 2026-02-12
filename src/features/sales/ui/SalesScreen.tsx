@@ -1,11 +1,9 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   View, StyleSheet, FlatList, TouchableOpacity, Text, Modal, Alert, TextInput 
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { useTheme } from '@/src/shared/theme';
 import { useProductStore } from '@/src/features/inventory';
 import { useCustomerStore } from '@/src/features/customers';
@@ -87,7 +85,9 @@ export default function SalesScreen() {
   };
 
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  console.log(receiptModalVisible)
   const [lastSale, setLastSale] = useState<any>(null);
+  console.log(lastSale)
 
   const confirmSale = () => {
     if (saleType === 'DUE' && !selectedCustomer) {
@@ -115,62 +115,62 @@ export default function SalesScreen() {
     setReceiptModalVisible(true);
   };
 
-  const generateReceiptHTML = useCallback(() => {
-    if (!lastSale) return '';
-    const symbol = currency === 'BDT' ? '৳' : '$';
-    const locale = currency === 'BDT' ? 'en-IN' : 'en-US';
+  // const generateReceiptHTML = useCallback(() => {
+  //   if (!lastSale) return '';
+  //   const symbol = currency === 'BDT' ? '৳' : '$';
+  //   const locale = currency === 'BDT' ? 'en-IN' : 'en-US';
 
-    const itemsHTML = lastSale.items
-      .map((item: any) => `
-        <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.productName}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${symbol}${item.unitPrice.toLocaleString(locale, { minimumFractionDigits: 2 })}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${symbol}${item.total.toLocaleString(locale, { minimumFractionDigits: 2 })}</td>
-        </tr>
-      `).join('');
+  //   const itemsHTML = lastSale.items
+  //     .map((item: any) => `
+  //       <tr>
+  //         <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.productName}</td>
+  //         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+  //         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${symbol}${item.unitPrice.toLocaleString(locale, { minimumFractionDigits: 2 })}</td>
+  //         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${symbol}${item.total.toLocaleString(locale, { minimumFractionDigits: 2 })}</td>
+  //       </tr>
+  //     `).join('');
 
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head><meta charset="utf-8"><title>Receipt</title></head>
-        <body>
-          <h1>RECEIPT</h1>
-          <p>Date: ${new Date(lastSale.date).toLocaleString()}</p>
-          <p>Type: ${lastSale.type}</p>
-          ${lastSale.customerName ? `<p>Customer: ${lastSale.customerName}</p>` : ''}
-          ${lastSale.notes ? `<p>Notes: ${lastSale.notes}</p>` : ''}
-          <table border="1" cellspacing="0" cellpadding="4">
-            <thead>
-              <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
-            </thead>
-            <tbody>${itemsHTML}</tbody>
-          </table>
-          <h3>Total: ${symbol}${lastSale.totalAmount.toLocaleString(locale, { minimumFractionDigits: 2 })}</h3>
-        </body>
-      </html>
-    `;
-  }, [lastSale, currency]);
+  //   return `
+  //     <!DOCTYPE html>
+  //     <html>
+  //       <head><meta charset="utf-8"><title>Receipt</title></head>
+  //       <body>
+  //         <h1>RECEIPT</h1>
+  //         <p>Date: ${new Date(lastSale.date).toLocaleString()}</p>
+  //         <p>Type: ${lastSale.type}</p>
+  //         ${lastSale.customerName ? `<p>Customer: ${lastSale.customerName}</p>` : ''}
+  //         ${lastSale.notes ? `<p>Notes: ${lastSale.notes}</p>` : ''}
+  //         <table border="1" cellspacing="0" cellpadding="4">
+  //           <thead>
+  //             <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+  //           </thead>
+  //           <tbody>${itemsHTML}</tbody>
+  //         </table>
+  //         <h3>Total: ${symbol}${lastSale.totalAmount.toLocaleString(locale, { minimumFractionDigits: 2 })}</h3>
+  //       </body>
+  //     </html>
+  //   `;
+  // }, [lastSale, currency]);
 
-  const downloadReceipt = async () => {
-    try {
-      const html = generateReceiptHTML();
-      const { uri } = await Print.printToFileAsync({ html });
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Share Receipt',
-          UTI: 'com.hisab.rakho.pdf',
-        });
-      } else {
-        Alert.alert('Success', 'PDF saved to: ' + uri);
-      }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      Alert.alert('Error', 'Failed to generate PDF receipt');
-    }
-  };
+  // const downloadReceipt = async () => {
+  //   try {
+  //     const html = generateReceiptHTML();
+  //     const { uri } = await Print.printToFileAsync({ html });
+  //     const isAvailable = await Sharing.isAvailableAsync();
+  //     if (isAvailable) {
+  //       await Sharing.shareAsync(uri, {
+  //         mimeType: 'application/pdf',
+  //         dialogTitle: 'Share Receipt',
+  //         UTI: 'com.hisab.rakho.pdf',
+  //       });
+  //     } else {
+  //       Alert.alert('Success', 'PDF saved to: ' + uri);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error generating PDF:', error);
+  //     Alert.alert('Error', 'Failed to generate PDF receipt');
+  //   }
+  // };
 
   return (
     <View style={[styles.container, { 

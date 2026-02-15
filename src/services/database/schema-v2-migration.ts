@@ -1,7 +1,8 @@
 /**
  * Schema V2 Migration
  *
- * Adds new columns to existing tables for enhanced analytics and features
+ * Adds new columns to existing tables for enhanced analytics and features.
+ * Defensive implementation to prevent "duplicate column" errors.
  */
 
 import { getDatabase, withTransaction } from './index';
@@ -17,10 +18,11 @@ export async function runSchemaV2Migration(): Promise<void> {
 
   try {
     // Check current schema version
-    const currentVersion = await appRepository.getSetting('schema_version');
+    const currentVersionStr = await appRepository.getSetting('schema_version');
+    const currentVersion = currentVersionStr ? parseInt(currentVersionStr, 10) : 1;
 
-    if (currentVersion === '2') {
-      console.log('[Schema V2] Already on version 2, skipping...');
+    if (currentVersion >= 2) {
+      console.log(`[Schema V2] Already on version ${currentVersion}, skipping...`);
       return;
     }
 
@@ -29,96 +31,66 @@ export async function runSchemaV2Migration(): Promise<void> {
     await withTransaction(async () => {
       const database = getDatabase();
       
-      // Add new columns to products table
-      await database.execAsync(`
-        ALTER TABLE products ADD COLUMN category_id TEXT;
-      `);
+      // Helper function to add column if it doesn't exist
+      const addColumnIfNeeded = async (table: string, column: string, definition: string) => {
+        const tableInfo: any[] = await database.getAllAsync(`PRAGMA table_info(${table})`);
+        const exists = tableInfo.some(col => col.name === column);
+        if (!exists) {
+          await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+        }
+      };
 
-      await database.execAsync(`
-        ALTER TABLE products ADD COLUMN cost_price REAL DEFAULT 0;
-      `);
-
-      await database.execAsync(`
-        ALTER TABLE products ADD COLUMN low_stock_level INTEGER DEFAULT 5;
-      `);
-
-      await database.execAsync(`
-        ALTER TABLE products ADD COLUMN image_uri TEXT;
-      `);
+      // Add columns to products table
+      await addColumnIfNeeded('products', 'category_id', 'TEXT');
+      await addColumnIfNeeded('products', 'cost_price', 'REAL DEFAULT 0');
+      await addColumnIfNeeded('products', 'low_stock_level', 'INTEGER DEFAULT 5');
+      await addColumnIfNeeded('products', 'image_uri', 'TEXT');
 
       // Create indexes for products
-      await database.execAsync(`
-        CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
-      `);
+      await database.execAsync(`CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);`);
+      await database.execAsync(`CREATE INDEX IF NOT EXISTS idx_products_low_stock ON products(quantity);`);
 
-      await database.execAsync(`
-        CREATE INDEX IF NOT EXISTS idx_products_low_stock ON products(quantity);
-      `);
-
-      // Add new columns to customers table
-      await database.execAsync(`
-        ALTER TABLE customers ADD COLUMN last_purchase_date TEXT;
-      `);
-
-      await database.execAsync(`
-        ALTER TABLE customers ADD COLUMN total_purchases REAL DEFAULT 0;
-      `);
-
-      await database.execAsync(`
-        ALTER TABLE customers ADD COLUMN purchase_count INTEGER DEFAULT 0;
-      `);
+      // Add columns to customers table
+      await addColumnIfNeeded('customers', 'last_purchase_date', 'TEXT');
+      await addColumnIfNeeded('customers', 'total_purchases', 'REAL DEFAULT 0');
+      await addColumnIfNeeded('customers', 'purchase_count', 'INTEGER DEFAULT 0');
 
       // Create indexes for customers
-      await database.execAsync(`
-        CREATE INDEX IF NOT EXISTS idx_customers_last_purchase ON customers(last_purchase_date);
-      `);
+      await database.execAsync(`CREATE INDEX IF NOT EXISTS idx_customers_last_purchase ON customers(last_purchase_date);`);
 
-      // Add new columns to sales table
-      await database.execAsync(`
-        ALTER TABLE sales ADD COLUMN discount REAL DEFAULT 0;
-      `);
-
-      await database.execAsync(`
-        ALTER TABLE sales ADD COLUMN payment_method TEXT DEFAULT 'CASH';
-      `);
-
-      await database.execAsync(`
-        ALTER TABLE sales ADD COLUMN profit REAL DEFAULT 0;
-      `);
-
-      await database.execAsync(`
-        ALTER TABLE sales ADD COLUMN notes TEXT;
-      `);
+      // Add columns to sales table
+      await addColumnIfNeeded('sales', 'discount', 'REAL DEFAULT 0');
+      await addColumnIfNeeded('sales', 'payment_method', "TEXT DEFAULT 'CASH'");
+      await addColumnIfNeeded('sales', 'profit', 'REAL DEFAULT 0');
+      await addColumnIfNeeded('sales', 'notes', 'TEXT');
 
       // Create index for sales
-      await database.execAsync(`
-        CREATE INDEX IF NOT EXISTS idx_sales_profit ON sales(profit);
-      `);
+      await database.execAsync(`CREATE INDEX IF NOT EXISTS idx_sales_profit ON sales(profit);`);
 
-      // Add new columns to sale_items table (for profit tracking)
-      await database.execAsync(`
-        ALTER TABLE sale_items ADD COLUMN cost_price REAL DEFAULT 0;
-      `);
+      // Add columns to sale_items table
+      await addColumnIfNeeded('sale_items', 'cost_price', 'REAL DEFAULT 0');
+      await addColumnIfNeeded('sale_items', 'profit', 'REAL DEFAULT 0');
 
-      await database.execAsync(`
-        ALTER TABLE sale_items ADD COLUMN profit REAL DEFAULT 0;
-      `);
-
-      // Create default "Uncategorized" category
+      // Create default "Uncategorized" category if it doesn't exist
       const now = new Date().toISOString();
-      await database.runAsync(
-        `INSERT INTO categories (id, name, description, icon, color, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          'default-uncategorized',
-          'Uncategorized',
-          'Default category for products',
-          'albums-outline',
-          '#6B7280',
-          now,
-          now,
-        ]
-      );
+      const existingCategory = await database.getFirstAsync('SELECT id FROM categories WHERE id = ?', ['default-uncategorized']);
+      
+      if (!existingCategory) {
+        await database.runAsync(
+          `INSERT INTO categories (id, business_id, name, description, icon, color, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'default-uncategorized',
+            'default-business',
+            'Uncategorized',
+            'Default category for products',
+            'albums-outline',
+            '#6B7280',
+            now,
+            now,
+          ]
+        );
+      }
 
       // Update schema version
       await database.runAsync(

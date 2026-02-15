@@ -29,8 +29,8 @@ export const salesRepository = {
       const database = getDatabase();
       // 1. Insert sale record
       const insertSaleSql = `
-        INSERT INTO sales (id, business_id, date, total_amount, type, customer_id, customer_name, discount, payment_method, profit, notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sales (id, business_id, date, total_amount, received_amount, type, customer_id, customer_name, discount, payment_method, profit, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       await database.runAsync(insertSaleSql, [
@@ -38,6 +38,7 @@ export const salesRepository = {
         saleData.businessId,
         now,
         saleData.totalAmount,
+        saleData.receivedAmount || 0,
         saleData.type,
         saleData.customerId || null,
         saleData.customerName || null,
@@ -92,43 +93,29 @@ export const salesRepository = {
 
       // 4. Update customer stats
       if (saleData.customerId) {
-        if (saleData.type === 'DUE') {
-          // For DUE sales, update stats AND due amount
-          const updateCustomerSql = `
-            UPDATE customers
-            SET last_purchase_date = ?,
-                total_purchases = total_purchases + ?,
-                purchase_count = purchase_count + 1,
-                total_due = total_due + ?,
-                updated_at = ?
-            WHERE id = ?
-          `;
+        // Calculate due amount: Total - Received
+        // If type is CASH, we assume they paid in full (handled by UI, but logic-wise)
+        const dueToAdd = saleData.type === 'DUE' 
+          ? (saleData.totalAmount - (saleData.receivedAmount || 0)) 
+          : 0;
 
-          await database.runAsync(updateCustomerSql, [
-            now,
-            saleData.totalAmount,
-            saleData.totalAmount,
-            now,
-            saleData.customerId,
-          ]);
-        } else {
-          // For CASH sales, just update stats
-          const updateCustomerSql = `
-            UPDATE customers
-            SET last_purchase_date = ?,
-                total_purchases = total_purchases + ?,
-                purchase_count = purchase_count + 1,
-                updated_at = ?
-            WHERE id = ?
-          `;
+        const updateCustomerSql = `
+          UPDATE customers
+          SET last_purchase_date = ?,
+              total_purchases = total_purchases + ?,
+              purchase_count = purchase_count + 1,
+              total_due = total_due + ?,
+              updated_at = ?
+          WHERE id = ?
+        `;
 
-          await database.runAsync(updateCustomerSql, [
-            now,
-            saleData.totalAmount,
-            now,
-            saleData.customerId,
-          ]);
-        }
+        await database.runAsync(updateCustomerSql, [
+          now,
+          saleData.totalAmount,
+          dueToAdd,
+          now,
+          saleData.customerId,
+        ]);
       }
     });
 
@@ -148,7 +135,8 @@ export const salesRepository = {
    */
   findAll: async (businessId: string): Promise<Sale[]> => {
     const sql = `
-      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId,
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, 
+             received_amount as receivedAmount, type, customer_id as customerId,
              customer_name as customerName, discount, payment_method as paymentMethod,
              profit, notes
       FROM sales
@@ -177,7 +165,8 @@ export const salesRepository = {
    */
   findById: async (id: string): Promise<Sale | null> => {
     const sql = `
-      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId,
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, 
+             received_amount as receivedAmount, type, customer_id as customerId,
              customer_name as customerName, discount, payment_method as paymentMethod,
              profit, notes
       FROM sales
@@ -221,7 +210,9 @@ export const salesRepository = {
    */
   getSalesByCustomer: async (customerId: string): Promise<Sale[]> => {
     const sql = `
-      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, 
+             received_amount as receivedAmount, type, customer_id as customerId, 
+             customer_name as customerName
       FROM sales
       WHERE customer_id = ?
       ORDER BY date DESC
@@ -248,7 +239,9 @@ export const salesRepository = {
    */
   getSalesByType: async (businessId: string, type: 'CASH' | 'DUE'): Promise<Sale[]> => {
     const sql = `
-      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, 
+             received_amount as receivedAmount, type, customer_id as customerId, 
+             customer_name as customerName
       FROM sales
       WHERE business_id = ? AND type = ?
       ORDER BY date DESC
@@ -274,7 +267,9 @@ export const salesRepository = {
    */
   getSalesByDateRange: async (businessId: string, startDate: string, endDate: string): Promise<Sale[]> => {
     const sql = `
-      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, 
+             received_amount as receivedAmount, type, customer_id as customerId, 
+             customer_name as customerName
       FROM sales
       WHERE business_id = ? AND date >= ? AND date <= ?
       ORDER BY date DESC
@@ -332,7 +327,7 @@ export const salesRepository = {
     const sql = `
       SELECT SUM(total_amount) as total
       FROM sales
-      WHERE business_id = ? AND date >= ? AND date <= ?
+      WHERE date >= ? AND date <= ?
     `;
 
     const result = await executeQuerySingle<{ total: number }>(sql, [

@@ -22,6 +22,7 @@ export default function BusinessProfileScreen() {
   const { 
     businesses, 
     activeBusinessId, 
+    activeBusiness,
     setActiveBusinessId, 
     addBusiness, 
     updateBusiness, 
@@ -120,6 +121,7 @@ export default function BusinessProfileScreen() {
         <ScreenHeader 
           title="Businesses" 
           subtitle="Multi-business management" 
+          topTitle={activeBusiness?.name}
           icon="business" 
         />
 

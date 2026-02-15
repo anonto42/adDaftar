@@ -7,9 +7,10 @@ import { useTheme } from '@/src/shared/theme';
 import { useCustomerStore } from '../model/customer.store';
 import { usePaymentStore } from '../model/payment.store';
 import { useAppStore } from '@/src/features/settings';
+import { useBusinessStore } from '@/src/features/business';
 import { Customer } from '@/src/shared/types/shop.types';
 import { formatCurrency } from '@/src/shared/utils/format';
-import { PressableScale, SearchBar, ScreenHeader } from '@/src/shared/components';
+import { PressableScale, SearchBar, ScreenHeader, EmptyState } from '@/src/shared/components';
 
 export default function CustomersScreen() {
   const { theme } = useTheme();
@@ -18,6 +19,7 @@ export default function CustomersScreen() {
   const { customers, addCustomer, updateCustomer, updateDue, deleteCustomer } = useCustomerStore();
   const { addPayment } = usePaymentStore();
   const { currency } = useAppStore();
+  const { activeBusiness } = useBusinessStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
@@ -139,6 +141,7 @@ export default function CustomersScreen() {
       <ScreenHeader 
         title="Customers" 
         subtitle="Relationship" 
+        topTitle={activeBusiness?.name}
         icon="people" 
       />
 
@@ -191,10 +194,19 @@ export default function CustomersScreen() {
                 <Ionicons name="trash" size={20} color={theme.colors.error} />
               </TouchableOpacity>
             </View>
-          </PressableScale>
-        )}
-      />
-
+                      </PressableScale>
+                  )}
+                  ListEmptyComponent={
+                    <EmptyState
+                      icon="people-outline"
+                      title="No customers yet"
+                      description={searchQuery ? "No customers found matching your search." : "Keep track of customer dues and purchase history by adding them here."}
+                      actionLabel={!searchQuery ? "Add Customer" : undefined}
+                      onAction={!searchQuery ? () => handleOpenModal() : undefined}
+                      style={{ marginTop: 40 }}
+                    />
+                  }
+                />
       <PressableScale
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         onPress={() => handleOpenModal()}

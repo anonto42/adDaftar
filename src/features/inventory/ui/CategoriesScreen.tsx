@@ -15,7 +15,8 @@ import { useTheme } from '@/src/shared/theme';
 import { useCategoryStore } from '../model/category.store';
 import { useProductStore } from '../model/product.store';
 import { Category } from '@/src/shared/types/shop.types';
-import { PressableScale, SearchBar, ScreenHeader } from '@/src/shared/components';
+import { PressableScale, SearchBar, ScreenHeader, EmptyState } from '@/src/shared/components';
+import { useBusinessStore } from '@/src/features/business';
 
 // Common icons for categories
 const CATEGORY_ICONS = [
@@ -35,6 +36,7 @@ export default function CategoriesScreen() {
   const { categories, addCategory, updateCategory, deleteCategory, getProductCount } =
     useCategoryStore();
   const { products } = useProductStore();
+  const { activeBusiness } = useBusinessStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
@@ -109,6 +111,7 @@ export default function CategoriesScreen() {
       <ScreenHeader 
         title="Categories" 
         subtitle="Organization" 
+        topTitle={activeBusiness?.name}
         icon="grid" 
       />
 
@@ -169,6 +172,16 @@ export default function CategoriesScreen() {
             </View>
           </PressableScale>
         )}
+        ListEmptyComponent={
+          <EmptyState
+            icon="grid-outline"
+            title="No categories yet"
+            description={searchQuery ? "No categories found matching your search." : "Organize your products by creating categories."}
+            actionLabel={!searchQuery ? "Add Category" : undefined}
+            onAction={!searchQuery ? () => handleOpenModal() : undefined}
+            style={{ marginTop: 40 }}
+          />
+        }
       />
 
       <PressableScale

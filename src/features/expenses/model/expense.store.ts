@@ -25,6 +25,8 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
   // Load expenses from SQLite database
   hydrate: async () => {
     const businessId = useBusinessStore.getState().activeBusinessId;
+    console.log(`[ExpenseStore] Hydrating for business: ${businessId}`);
+    
     if (!businessId) {
       set({ expenses: [], isHydrated: true });
       return;
@@ -32,6 +34,7 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
     try {
       const expenses = await expenseRepository.findAll(businessId);
+      console.log(`[ExpenseStore] Found ${expenses.length} expenses`);
       set({ expenses, isHydrated: true });
     } catch (error) {
       console.error('[ExpenseStore] Failed to hydrate:', error);

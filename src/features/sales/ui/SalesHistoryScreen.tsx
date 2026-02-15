@@ -5,8 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/shared/theme';
 import { useSalesStore } from '../model/sales.store';
 import { useAppStore } from '@/src/features/settings';
+import { useBusinessStore } from '@/src/features/business';
 import { formatCurrency } from '@/src/shared/utils/format';
-import { SearchBar, ScreenHeader } from '@/src/shared/components';
+import { SearchBar, ScreenHeader, EmptyState } from '@/src/shared/components';
 import { Stack, useRouter } from 'expo-router';
 
 export default function SalesHistoryScreen() {
@@ -15,6 +16,7 @@ export default function SalesHistoryScreen() {
   const router = useRouter();
   const { sales, hydrate } = useSalesStore();
   const { currency } = useAppStore();
+  const { activeBusiness } = useBusinessStore();
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -36,6 +38,7 @@ export default function SalesHistoryScreen() {
       <ScreenHeader 
         title="Sales History" 
         subtitle="Past Transactions" 
+        topTitle={activeBusiness?.name}
         icon="list"
         rightElement={
           <TouchableOpacity 
@@ -70,9 +73,16 @@ export default function SalesHistoryScreen() {
                   {new Date(item.date).toLocaleString()} • {item.type}
                 </Text>
               </View>
-              <Text style={[styles.saleAmount, { color: theme.colors.text, fontVariant: ['tabular-nums'] }]}>
-                {formatCurrency(item.totalAmount, currency)}
-              </Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.saleAmount, { color: theme.colors.text, fontVariant: ['tabular-nums'] }]}>
+                  {formatCurrency(item.totalAmount, currency)}
+                </Text>
+                {item.type === 'DUE' && (
+                  <Text style={{ color: theme.colors.error, fontSize: 11, fontWeight: '600' }}>
+                    Due: {formatCurrency(item.totalAmount - (item.receivedAmount || 0), currency)}
+                  </Text>
+                )}
+              </View>
             </View>
             
             {item.notes && (
@@ -88,18 +98,21 @@ export default function SalesHistoryScreen() {
             
             <View style={styles.saleDetails}>
               <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
-                {item.items.length} items • Paid via {item.paymentMethod}
+                {item.items.length} items • Paid: {formatCurrency(item.receivedAmount || 0, currency)}
+              </Text>
+              <Text style={{ color: theme.colors.textTertiary, fontSize: 11 }}>
+                via {item.paymentMethod}
               </Text>
             </View>
           </View>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={64} color={theme.colors.textTertiary} />
-            <Text style={{ color: theme.colors.textTertiary, fontSize: 16, marginTop: 16 }}>
-              No sales records found
-            </Text>
-          </View>
+          <EmptyState 
+            icon="receipt-outline" 
+            title="No sales records found" 
+            description={searchQuery ? "No sales match your search criteria." : "Start making sales in the POS screen to see them here."}
+            style={{ marginTop: 40 }}
+          />
         }
       />
     </View>

@@ -58,6 +58,7 @@ export interface Sale {
   date: string; // ISO string
   items: SaleItem[];
   totalAmount: number;
+  receivedAmount: number;
   type: 'CASH' | 'DUE';
   customerId?: string;
   customerName?: string;

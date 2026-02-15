@@ -7,16 +7,22 @@ import { Text } from './Text';
 interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
+  topTitle?: string;
   icon?: keyof typeof Ionicons.glyphMap;
   rightElement?: React.ReactNode;
 }
 
-export const ScreenHeader = ({ title, subtitle, icon, rightElement }: ScreenHeaderProps) => {
+export const ScreenHeader = ({ title, subtitle, topTitle, icon, rightElement }: ScreenHeaderProps) => {
   const { theme } = useTheme();
 
   return (
     <View style={styles.headerContainer}>
       <View style={styles.titleContainer}>
+        {topTitle && (
+          <Text style={[styles.topTitle, { color: theme.colors.primary }]}>
+            {topTitle}
+          </Text>
+        )}
         {subtitle && (
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             {subtitle}
@@ -47,6 +53,13 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
+  },
+  topTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,8 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/shared/theme';
 import { useExpenseStore } from '../model/expense.store';
 import { useAppStore } from '@/src/features/settings';
+import { useBusinessStore } from '@/src/features/business';
 import { Expense, ExpenseCategory } from '@/src/shared/types/shop.types';
-import { PressableScale, ScreenHeader } from '@/src/shared/components';
+import { PressableScale, ScreenHeader, EmptyState } from '@/src/shared/components';
 import { formatCurrency } from '@/src/shared/utils/format';
 
 const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; icon: string }[] = [
@@ -39,11 +40,11 @@ export default function ExpensesScreen() {
     getMonthlyTotal,
   } = useExpenseStore();
   const { currency } = useAppStore();
+  const { activeBusiness } = useBusinessStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [monthlyTotal, setMonthlyTotal] = useState(0);
-  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>(expenses);
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'all'>('all');
 
   // Form State
@@ -52,27 +53,22 @@ export default function ExpensesScreen() {
   const [category, setCategory] = useState<ExpenseCategory>('OTHER');
   const [notes, setNotes] = useState('');
 
+  const filteredExpenses = useMemo(() => {
+    if (selectedCategory === 'all') {
+      return expenses;
+    }
+    return expenses.filter((e) => e.category === selectedCategory);
+  }, [expenses, selectedCategory]);
+
   const loadMonthlyTotal = useCallback(async () => {
     const now = new Date();
     const total = await getMonthlyTotal(now.getMonth() + 1, now.getFullYear());
     setMonthlyTotal(total);
   }, [getMonthlyTotal]);
 
-  const filterExpenses = useCallback(() => {
-    if (selectedCategory === 'all') {
-      setFilteredExpenses(expenses);
-    } else {
-      setFilteredExpenses(expenses.filter((e) => e.category === selectedCategory));
-    }
-  }, [expenses, selectedCategory]);
-
   useEffect(() => {
     loadMonthlyTotal();
-  }, [loadMonthlyTotal]);
-
-  useEffect(() => {
-    filterExpenses();
-  }, [filterExpenses]);
+  }, [loadMonthlyTotal, expenses]); // Also reload when expenses change
 
   const handleOpenModal = (expense?: Expense) => {
     if (expense) {
@@ -140,6 +136,7 @@ export default function ExpensesScreen() {
       <ScreenHeader 
         title="Expenses" 
         subtitle="Cash Out" 
+        topTitle={activeBusiness?.name}
         icon="receipt" 
       />
 
@@ -274,12 +271,14 @@ export default function ExpensesScreen() {
           );
         }}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={64} color={theme.colors.textTertiary} />
-            <Text style={[styles.emptyText, { color: theme.colors.textTertiary }]}>
-              No expenses recorded yet
-            </Text>
-          </View>
+          <EmptyState
+            icon="receipt-outline"
+            title="No expenses recorded yet"
+            description={selectedCategory !== 'all' ? "No expenses found in this category." : "Track your business spending by adding expenses here."}
+            actionLabel={selectedCategory === 'all' ? "Add Expense" : undefined}
+            onAction={selectedCategory === 'all' ? () => handleOpenModal() : undefined}
+            style={{ marginTop: 40 }}
+          />
         }
       />
 

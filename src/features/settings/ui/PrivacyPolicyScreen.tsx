@@ -4,11 +4,13 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/shared/theme';
 import { useI18n } from '@/src/shared/i18n';
-import { Ionicons } from '@expo/vector-icons';
+import { useBusinessStore } from '@/src/features/business';
+import { ScreenHeader } from '@/src/shared/components';
 
 export default function PrivacyPolicyScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { activeBusiness } = useBusinessStore();
   const { t } = useI18n();
 
   const PolicySection = ({ title, content }: { title: string; content: string }) => (
@@ -19,27 +21,20 @@ export default function PrivacyPolicyScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16 }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16, paddingHorizontal: 16 }]}>
       <Stack.Screen options={{ 
-        headerShown: true, 
-        title: t('privacy_policy'),
-        headerStyle: { backgroundColor: theme.colors.background },
-        headerTintColor: theme.colors.text,
-        headerShadowVisible: false,
+        headerShown: false, 
       }} />
 
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Security</Text>
-          <Text style={[styles.header, { color: theme.colors.text }]}>{t('privacy_policy')}</Text>
-        </View>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
-        </View>
-      </View>
+      <ScreenHeader 
+        title={t('privacy_policy')}
+        subtitle="Security"
+        topTitle={activeBusiness?.name}
+        icon="shield-checkmark"
+      />
 
       <ScrollView 
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.intro, { color: theme.colors.textSecondary }]}>

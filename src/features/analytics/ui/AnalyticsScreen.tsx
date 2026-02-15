@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/shared/theme';
@@ -10,14 +10,17 @@ import { expenseRepository } from '@/src/features/expenses';
 import { SalesTrend, TopProduct, TopCustomer, FinancialSummary } from '@/src/shared/types/shop.types';
 import { PressableScale, ScreenHeader } from '@/src/shared/components';
 import { formatCurrency } from '@/src/shared/utils/format';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function AnalyticsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { currency } = useAppStore();
-  const { activeBusinessId } = useBusinessStore();
+  const { activeBusinessId, activeBusiness } = useBusinessStore();
 
   const [salesTrends, setSalesTrends] = useState<SalesTrend[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -99,7 +102,16 @@ export default function AnalyticsScreen() {
       <ScreenHeader 
         title="Analytics" 
         subtitle="Performance" 
+        topTitle={activeBusiness?.name}
         icon="stats-chart" 
+        rightElement={
+          <TouchableOpacity 
+            style={[styles.reportButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+            onPress={() => router.push('/reports')}
+          >
+            <Ionicons name="document-text-outline" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        }
       />
 
       {/* Period Selector */}
@@ -141,67 +153,65 @@ export default function AnalyticsScreen() {
       </View>
 
       {/* Financial Summary Cards */}
-      {financialSummary && (
-        <View>
-          <View style={styles.statsContainer}>
-            <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
-                Total Sales
-              </Text>
-              <Text style={[styles.cardValue, { color: theme.colors.primary, fontVariant: ['tabular-nums'] }]}>
-                {formatCurrency(financialSummary.totalSales, currency)}
-              </Text>
-              <Text style={[styles.cardSubtext, { color: theme.colors.textTertiary }]}>
-                {financialSummary.salesCount} transactions
-              </Text>
-            </View>
-            <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
-                Gross Profit
-              </Text>
-              <Text style={[styles.cardValue, { color: theme.colors.success, fontVariant: ['tabular-nums'] }]}>
-                {formatCurrency(financialSummary.totalProfit, currency)}
-              </Text>
-              <Text style={[styles.cardSubtext, { color: theme.colors.textTertiary }]}>
-                {financialSummary.totalSales > 0 
-                  ? ((financialSummary.totalProfit / financialSummary.totalSales) * 100).toFixed(1) 
-                  : '0.0'}% margin
-              </Text>
-            </View>
+      <View>
+        <View style={styles.statsContainer}>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
+              Total Sales
+            </Text>
+            <Text style={[styles.cardValue, { color: theme.colors.primary, fontVariant: ['tabular-nums'] }]}>
+              {formatCurrency(financialSummary?.totalSales || 0, currency)}
+            </Text>
+            <Text style={[styles.cardSubtext, { color: theme.colors.textTertiary }]}>
+              {financialSummary?.salesCount || 0} transactions
+            </Text>
           </View>
-
-          <View style={[styles.statsContainer, { marginTop: 16 }]}>
-            <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
-                Total Expenses
-              </Text>
-              <Text style={[styles.cardValue, { color: theme.colors.error, fontVariant: ['tabular-nums'] }]}>
-                {formatCurrency(totalExpenses, currency)}
-              </Text>
-            </View>
-            <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
-                Net Profit
-              </Text>
-              <Text
-                style={[
-                  styles.cardValue,
-                  { color: financialSummary.netProfit >= 0 ? theme.colors.success : theme.colors.error, fontVariant: ['tabular-nums'] },
-                ]}
-              >
-                {formatCurrency(financialSummary.netProfit, currency)}
-              </Text>
-            </View>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
+              Gross Profit
+            </Text>
+            <Text style={[styles.cardValue, { color: theme.colors.success, fontVariant: ['tabular-nums'] }]}>
+              {formatCurrency(financialSummary?.totalProfit || 0, currency)}
+            </Text>
+            <Text style={[styles.cardSubtext, { color: theme.colors.textTertiary }]}>
+              {financialSummary && financialSummary.totalSales > 0 
+                ? ((financialSummary.totalProfit / financialSummary.totalSales) * 100).toFixed(1) 
+                : '0.0'}% margin
+            </Text>
           </View>
         </View>
-      )}
+
+        <View style={[styles.statsContainer, { marginTop: 16 }]}>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
+              Total Expenses
+            </Text>
+            <Text style={[styles.cardValue, { color: theme.colors.error, fontVariant: ['tabular-nums'] }]}>
+              {formatCurrency(totalExpenses, currency)}
+            </Text>
+          </View>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>
+              Net Profit
+            </Text>
+            <Text
+              style={[
+                styles.cardValue,
+                { color: (financialSummary?.netProfit || 0) >= 0 ? theme.colors.success : theme.colors.error, fontVariant: ['tabular-nums'] },
+              ]}
+            >
+              {formatCurrency(financialSummary?.netProfit || 0, currency)}
+            </Text>
+          </View>
+        </View>
+      </View>
 
       {/* Sales Trend Chart */}
-      {salesTrends.length > 0 && (
-        <View style={[styles.chartCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, marginTop: 24 }]}>
-          <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
-            Sales & Profit Trend
-          </Text>
+      <View style={[styles.chartCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, marginTop: 24 }]}>
+        <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
+          Sales & Profit Trend
+        </Text>
+        {salesTrends.length > 0 ? (
           <LineChart
             data={{
               labels: salesTrends.map((t) => {
@@ -231,16 +241,21 @@ export default function AnalyticsScreen() {
               borderRadius: 16,
             }}
           />
-        </View>
-      )}
+        ) : (
+          <View style={{ height: 240, justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="trending-up-outline" size={48} color={theme.colors.textTertiary} />
+            <Text style={{ color: theme.colors.textSecondary, marginTop: 12 }}>No trend data for this period</Text>
+          </View>
+        )}
+      </View>
 
       {/* Top Products */}
-      {topProducts.length > 0 && (
-        <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
-            🏆 Top Selling Products
-          </Text>
-          {topProducts.map((product, index) => (
+      <View style={{ marginTop: 24 }}>
+        <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
+          🏆 Top Selling Products
+        </Text>
+        {topProducts.length > 0 ? (
+          topProducts.map((product, index) => (
             <PressableScale
               key={product.productId}
               style={[
@@ -265,17 +280,21 @@ export default function AnalyticsScreen() {
                 {formatCurrency(product.profit, currency)}
               </Text>
             </PressableScale>
-          ))}
-        </View>
-      )}
+          ))
+        ) : (
+          <View style={[styles.emptySection, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={{ color: theme.colors.textSecondary }}>No sales recorded yet</Text>
+          </View>
+        )}
+      </View>
 
       {/* Top Customers */}
-      {topCustomers.length > 0 && (
-        <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
-            ⭐ Top Customers
-          </Text>
-          {topCustomers.map((customer, index) => (
+      <View style={{ marginTop: 24 }}>
+        <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
+          ⭐ Top Customers
+        </Text>
+        {topCustomers.length > 0 ? (
+          topCustomers.map((customer, index) => (
             <PressableScale
               key={customer.customerId}
               style={[
@@ -302,9 +321,13 @@ export default function AnalyticsScreen() {
                 {formatCurrency(customer.totalPurchases, currency)}
               </Text>
             </PressableScale>
-          ))}
-        </View>
-      )}
+          ))
+        ) : (
+          <View style={[styles.emptySection, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={{ color: theme.colors.textSecondary }}>No customer data for this period</Text>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -316,6 +339,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
+  },
+  reportButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   greeting: { fontSize: 14, fontWeight: '500', marginBottom: 4 },
   header: { fontSize: 28, fontWeight: 'bold' },
@@ -371,6 +407,14 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   sectionHeader: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  emptySection: {
+    padding: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
   listItem: {
     padding: 16,
     borderRadius: 12,

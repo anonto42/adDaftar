@@ -5,7 +5,7 @@
  */
 
 import * as SQLite from 'expo-sqlite';
-import { SCHEMA_STATEMENTS, DROP_ALL_TABLES } from './schema';
+import { SCHEMA_STATEMENTS, DROP_ALL_TABLES, SCHEMA_VERSION } from './schema';
 
 const DATABASE_NAME = 'shop_management.db';
 
@@ -45,6 +45,13 @@ export async function initializeDatabase(): Promise<void> {
         for (const statement of SCHEMA_STATEMENTS) {
           await database.execAsync(statement);
         }
+
+        // Set the schema version to the current version so migrations are skipped on fresh install
+        const now = new Date().toISOString();
+        await database.runAsync(
+          `INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)`,
+          ['schema_version', SCHEMA_VERSION.toString(), now]
+        );
 
         console.log('[DB] Database initialized successfully');
       } catch (error) {

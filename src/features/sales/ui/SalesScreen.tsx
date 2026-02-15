@@ -9,6 +9,7 @@ import { useProductStore } from '@/src/features/inventory';
 import { useCustomerStore } from '@/src/features/customers';
 import { useSalesStore } from '../model/sales.store';
 import { useAppStore } from '@/src/features/settings';
+import { useBusinessStore } from '@/src/features/business';
 import { Product, SaleItem } from '@/src/shared/types/shop.types';
 import { PressableScale } from '@/src/shared/components/PressableScale';
 import { formatCurrency } from '@/src/shared/utils/format';
@@ -22,6 +23,7 @@ export default function SalesScreen() {
   const { customers } = useCustomerStore();
   const { createSale } = useSalesStore();
   const { currency } = useAppStore();
+  const { activeBusiness } = useBusinessStore();
 
   const [cart, setCart] = useState<SaleItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +31,7 @@ export default function SalesScreen() {
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [saleType, setSaleType] = useState<'CASH' | 'DUE'>('CASH');
+  const [receivedAmount, setReceivedAmount] = useState('');
   const [notes, setNotes] = useState('');
 
   const filteredProducts = useMemo(() => 
@@ -81,6 +84,7 @@ export default function SalesScreen() {
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
+    setReceivedAmount(saleType === 'CASH' ? totalAmount.toString() : '0');
     setCheckoutModalVisible(true);
   };
 
@@ -95,9 +99,21 @@ export default function SalesScreen() {
       return;
     }
 
+    const parsedReceived = parseFloat(receivedAmount) || 0;
+    if (saleType === 'CASH' && parsedReceived < totalAmount) {
+      Alert.alert("Error", "Cash sales must be paid in full.");
+      return;
+    }
+
+    if (parsedReceived > totalAmount) {
+      Alert.alert("Error", "Received amount cannot be greater than total amount.");
+      return;
+    }
+
     const saleData = {
       items: cart,
       totalAmount,
+      receivedAmount: parsedReceived,
       type: saleType,
       customerId: selectedCustomer || undefined,
       customerName: selectedCustomer ? customers.find(c => c.id === selectedCustomer)?.name : undefined,
@@ -111,6 +127,7 @@ export default function SalesScreen() {
     setCheckoutModalVisible(false);
     setSaleType('CASH');
     setSelectedCustomer(null);
+    setReceivedAmount('');
     setNotes('');
     setReceiptModalVisible(true);
   };
@@ -181,6 +198,7 @@ export default function SalesScreen() {
       <ScreenHeader 
         title="POS" 
         subtitle="Point of Sale" 
+        topTitle={activeBusiness?.name}
         rightElement={
           <TouchableOpacity 
             style={[styles.historyButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
@@ -327,16 +345,48 @@ export default function SalesScreen() {
             <View style={styles.typeSelector}>
               <TouchableOpacity 
                 style={[styles.typeButton, saleType === 'CASH' && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
-                onPress={() => setSaleType('CASH')}
+                onPress={() => {
+                  setSaleType('CASH');
+                  setReceivedAmount(totalAmount.toString());
+                }}
               >
                 <Text style={{ color: saleType === 'CASH' ? 'white' : theme.colors.text, fontWeight: '600' }}>CASH</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.typeButton, saleType === 'DUE' && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
-                onPress={() => setSaleType('DUE')}
+                onPress={() => {
+                  setSaleType('DUE');
+                  setReceivedAmount('0');
+                }}
               >
                 <Text style={{ color: saleType === 'DUE' ? 'white' : theme.colors.text, fontWeight: '600' }}>DUE</Text>
               </TouchableOpacity>
+            </View>
+
+            {/* Amount Received Input */}
+            <View style={{ marginTop: 16 }}>
+              <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Amount Received</Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  borderRadius: 12,
+                  padding: 12,
+                  color: saleType === 'CASH' ? theme.colors.textTertiary : theme.colors.text,
+                  backgroundColor: saleType === 'CASH' ? theme.colors.backgroundSecondary : theme.colors.background,
+                }}
+                keyboardType="numeric"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={receivedAmount}
+                onChangeText={setReceivedAmount}
+                editable={saleType === 'DUE'}
+              />
+              {saleType === 'DUE' && (
+                <Text style={{ color: theme.colors.error, fontSize: 11, marginTop: 4 }}>
+                  Remaining due: {formatCurrency(Math.max(0, totalAmount - (parseFloat(receivedAmount) || 0)), currency)}
+                </Text>
+              )}
             </View>
 
             {/* Notes Input */}

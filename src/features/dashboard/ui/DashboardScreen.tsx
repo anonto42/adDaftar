@@ -22,7 +22,7 @@ export default function DashboardScreen() {
   const { getTotalDues } = useCustomerStore();
   const { products } = useProductStore();
   const { currency } = useAppStore();
-  const { activeBusinessId } = useBusinessStore();
+  const { activeBusinessId, activeBusiness } = useBusinessStore();
   const { t } = useI18n();
 
   const [todaysSales, setTodaysSales] = useState(0);
@@ -76,6 +76,7 @@ export default function DashboardScreen() {
       <ScreenHeader 
         title={t('dashboard')} 
         subtitle="Overview"
+        topTitle={activeBusiness?.name}
         icon='home' 
         // rightElement={
         //   <TouchableOpacity 
@@ -118,11 +119,11 @@ export default function DashboardScreen() {
       </View>
 
       {/* Sales Trend Chart */}
-      {salesTrends.length > 0 && (
-        <View style={[styles.chartCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, marginTop: 24 }]}>
-          <Text style={[styles.sectionHeader, { color: theme.colors.text, marginTop: 0, marginBottom: 16 }]}>
-            7-Day Sales Trend
-          </Text>
+      <View style={[styles.chartCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, marginTop: 24 }]}>
+        <Text style={[styles.sectionHeader, { color: theme.colors.text, marginTop: 0, marginBottom: 16 }]}>
+          7-Day Sales Trend
+        </Text>
+        {salesTrends.length > 0 ? (
           <LineChart
             data={{
               labels: salesTrends.map(t => {
@@ -157,16 +158,21 @@ export default function DashboardScreen() {
               borderRadius: 16
             }}
           />
-        </View>
-      )}
+        ) : (
+          <View style={{ height: 220, justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="bar-chart-outline" size={48} color={theme.colors.textTertiary} />
+            <Text style={{ color: theme.colors.textSecondary, marginTop: 12 }}>No sales data for this period</Text>
+          </View>
+        )}
+      </View>
 
       {/* Recent Sales */}
-      {recentSales.length > 0 && (
-        <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
-            Recent Transactions
-          </Text>
-          {recentSales.map((sale) => (
+      <View style={{ marginTop: 24 }}>
+        <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
+          Recent Transactions
+        </Text>
+        {recentSales.length > 0 ? (
+          recentSales.map((sale) => (
             <View
               key={sale.id}
               style={[styles.transactionItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
@@ -195,17 +201,21 @@ export default function DashboardScreen() {
                 </View>
               </View>
             </View>
-          ))}
-        </View>
-      )}
+          ))
+        ) : (
+          <View style={[styles.emptySection, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={{ color: theme.colors.textSecondary }}>No recent transactions</Text>
+          </View>
+        )}
+      </View>
 
       {/* Low Stock Alert */}
-      {lowStockProducts.length > 0 && (
-        <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
-            ⚠️ Low Stock Alert
-          </Text>
-          {lowStockProducts.map((product) => (
+      <View style={{ marginTop: 24 }}>
+        <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>
+          ⚠️ Low Stock Alert
+        </Text>
+        {lowStockProducts.length > 0 ? (
+          lowStockProducts.map((product) => (
             <View
               key={product.id}
               style={[styles.alertItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.error }]}
@@ -224,9 +234,13 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             </View>
-          ))}
-        </View>
-      )}
+          ))
+        ) : (
+          <View style={[styles.emptySection, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={{ color: theme.colors.success }}>All products are in good stock</Text>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -292,6 +306,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   sectionHeader: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  emptySection: {
+    padding: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
   transactionItem: {
     padding: 16,
     borderRadius: 12,

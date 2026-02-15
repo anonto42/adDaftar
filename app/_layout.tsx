@@ -26,6 +26,7 @@ function RootLayoutNav() {
         const { runMigrationIfNeeded } = await import('@/src/services/database/migrations');
         const { runSchemaV2Migration } = await import('@/src/services/database/schema-v2-migration');
         const { runSchemaV4Migration } = await import('@/src/services/database/schema-v4-migration');
+        const { runSchemaV5Migration } = await import('@/src/services/database/schema-v5-migration');
         const { useProductStore, useCustomerStore, useSalesStore, useCategoryStore, usePaymentStore, useExpenseStore, useAppStore, useBusinessStore } = await import('@/src/store');
 
         // 1. Initialize SQLite database
@@ -44,7 +45,11 @@ function RootLayoutNav() {
         console.log('[App] Running multi-business migration if needed...');
         await runSchemaV4Migration();
 
-        // 5. Hydrate all stores from SQLite sequentially to avoid contention
+        // 5. Run partial payment migration
+        console.log('[App] Running partial payment migration if needed...');
+        await runSchemaV5Migration();
+
+        // 6. Hydrate all stores from SQLite sequentially to avoid contention
         console.log('[App] Hydrating stores...');
         await useAppStore.getState().hydrate();
         await useBusinessStore.getState().hydrate();
@@ -111,6 +116,7 @@ function RootLayoutNav() {
         <Stack.Screen name="privacy-policy" options={{ presentation: 'card' }} />
         <Stack.Screen name="customers/[id]" options={{ presentation: 'card', headerShown: true, title: 'Customer Details' }} />
         <Stack.Screen name="sales-history" options={{ presentation: 'card', headerShown: false }} />
+        <Stack.Screen name="reports" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </View>
   );

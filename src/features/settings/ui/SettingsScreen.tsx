@@ -4,16 +4,18 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/shared/theme';
-import { useAppStore } from '@/src/store';
+import { useAppStore, useBusinessStore } from '@/src/store';
 import { useI18n } from '@/src/shared/i18n';
 import { dropAllTables, initializeDatabase, resetDatabaseState } from '@/src/services/database';
 import { APP_CONSTANTS } from '@/src/config';
+import { ScreenHeader } from '@/src/shared/components';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { currency, setCurrency, setTheme: setStoreTheme, language, setLanguage } = useAppStore();
+  const { activeBusiness } = useBusinessStore();
   const { t } = useI18n();
 
   const handleSetTheme = async (mode: 'light' | 'dark' | 'system') => {
@@ -101,16 +103,19 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16 }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top + 16, paddingHorizontal: 16 }]}>
       <Stack.Screen options={{ 
-        headerShown: true, 
-        title: t('settings'),
-        headerStyle: { backgroundColor: theme.colors.background },
-        headerTintColor: theme.colors.text,
-        headerShadowVisible: false,
+        headerShown: false, 
       }} />
+
+      <ScreenHeader 
+        title={t('settings')}
+        subtitle="App Preferences"
+        topTitle={activeBusiness?.name}
+        icon="settings"
+      />
       
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }} showsVerticalScrollIndicator={false}>
         <SettingSection title="Business Management">
           <SettingItem 
             icon="business-outline" 
@@ -218,7 +223,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  section: { marginTop: 24, paddingHorizontal: 16 },
+  section: { marginTop: 24 },
   sectionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 1 },
   sectionContent: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },

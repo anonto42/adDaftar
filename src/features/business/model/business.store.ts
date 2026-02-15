@@ -8,6 +8,7 @@ const ACTIVE_BUSINESS_ID_KEY = 'active_business_id';
 interface BusinessState {
   businesses: Business[];
   activeBusinessId: string | null;
+  activeBusiness: Business | null;
   isHydrated: boolean;
   
   // Actions
@@ -22,6 +23,7 @@ interface BusinessState {
 export const useBusinessStore = create<BusinessState>()((set, get) => ({
   businesses: [],
   activeBusinessId: null,
+  activeBusiness: null,
   isHydrated: false,
 
   hydrate: async () => {
@@ -36,9 +38,12 @@ export const useBusinessStore = create<BusinessState>()((set, get) => ({
         activeBusinessId = businesses.length > 0 ? businesses[0].id : null;
       }
 
+      const activeBusiness = businesses.find(b => b.id === activeBusinessId) || null;
+
       set({ 
         businesses, 
         activeBusinessId, 
+        activeBusiness,
         isHydrated: true 
       });
 
@@ -52,11 +57,18 @@ export const useBusinessStore = create<BusinessState>()((set, get) => ({
   },
 
   setActiveBusinessId: async (id: string) => {
+    console.log(`[BusinessStore] Setting active business to: ${id}`);
     await AsyncStorage.setItem(ACTIVE_BUSINESS_ID_KEY, id);
-    set({ activeBusinessId: id });
+    const { businesses } = get();
+    const activeBusiness = businesses.find(b => b.id === id) || null;
     
-    // Trigger re-hydration of all other stores
-    const { useProductStore, useCategoryStore, useCustomerStore, useSalesStore, usePaymentStore, useExpenseStore } = await import('@/src/store');
+    set({ activeBusinessId: id, activeBusiness });
+    
+    console.log(`[BusinessStore] Triggering re-hydration for all stores...`);
+    const { useProductStore, useCategoryStore } = await import('@/src/features/inventory');
+    const { useCustomerStore, usePaymentStore } = await import('@/src/features/customers');
+    const { useSalesStore } = await import('@/src/features/sales');
+    const { useExpenseStore } = await import('@/src/features/expenses');
     
     await Promise.all([
       useProductStore.getState().hydrate(),
@@ -70,9 +82,8 @@ export const useBusinessStore = create<BusinessState>()((set, get) => ({
 
   addBusiness: async (businessData) => {
     const newBusiness = await businessRepository.create(businessData);
-    set((state) => ({ 
-      businesses: [...state.businesses, newBusiness] 
-    }));
+    const updatedBusinesses = [...get().businesses, newBusiness];
+    set({ businesses: updatedBusinesses });
     
     // If it's the first business, set it as active
     if (!get().activeBusinessId) {
@@ -84,31 +95,48 @@ export const useBusinessStore = create<BusinessState>()((set, get) => ({
 
   updateBusiness: async (id, updates) => {
     await businessRepository.update(id, updates);
-    set((state) => ({
-      businesses: state.businesses.map((b) => (b.id === id ? { ...b, ...updates } : b)),
-    }));
+    const updatedBusinesses = get().businesses.map((b) => (b.id === id ? { ...b, ...updates } : b));
+    const activeBusiness = updatedBusinesses.find(b => b.id === get().activeBusinessId) || null;
+    
+    set({
+      businesses: updatedBusinesses,
+      activeBusiness
+    });
   },
 
   deleteBusiness: async (id) => {
     await businessRepository.delete(id);
-    set((state) => {
-      const newBusinesses = state.businesses.filter((b) => b.id !== id);
-      let newActiveId = state.activeBusinessId;
-      
-      if (newActiveId === id) {
-        newActiveId = newBusinesses.length > 0 ? newBusinesses[0].id : null;
-      }
-      
-      return {
-        businesses: newBusinesses,
-        activeBusinessId: newActiveId
-      };
+    const updatedBusinesses = get().businesses.filter((b) => b.id !== id);
+    let newActiveId = get().activeBusinessId;
+    
+    if (newActiveId === id) {
+      newActiveId = updatedBusinesses.length > 0 ? updatedBusinesses[0].id : null;
+    }
+    
+    const activeBusiness = updatedBusinesses.find(b => b.id === newActiveId) || null;
+    
+    set({
+      businesses: updatedBusinesses,
+      activeBusinessId: newActiveId,
+      activeBusiness
     });
     
-    const activeId = get().activeBusinessId;
-    if (activeId) {
-      await AsyncStorage.setItem(ACTIVE_BUSINESS_ID_KEY, activeId);
-      await get().setActiveBusinessId(activeId);
+    if (newActiveId) {
+      await AsyncStorage.setItem(ACTIVE_BUSINESS_ID_KEY, newActiveId);
+      // Refresh other stores using direct imports
+      const { useProductStore, useCategoryStore } = await import('@/src/features/inventory');
+      const { useCustomerStore, usePaymentStore } = await import('@/src/features/customers');
+      const { useSalesStore } = await import('@/src/features/sales');
+      const { useExpenseStore } = await import('@/src/features/expenses');
+
+      await Promise.all([
+        useProductStore.getState().hydrate(),
+        useCategoryStore.getState().hydrate(),
+        useCustomerStore.getState().hydrate(),
+        useSalesStore.getState().hydrate(),
+        usePaymentStore.getState().hydrate(),
+        useExpenseStore.getState().hydrate(),
+      ]);
     } else {
       await AsyncStorage.removeItem(ACTIVE_BUSINESS_ID_KEY);
     }

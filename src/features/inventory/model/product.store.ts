@@ -23,6 +23,8 @@ export const useProductStore = create<ProductState>()((set, get) => ({
   // Load products from SQLite database
   hydrate: async () => {
     const businessId = useBusinessStore.getState().activeBusinessId;
+    console.log(`[ProductStore] Hydrating for business: ${businessId}`);
+    
     if (!businessId) {
       set({ products: [], isHydrated: true });
       return;
@@ -30,6 +32,7 @@ export const useProductStore = create<ProductState>()((set, get) => ({
 
     try {
       const products = await productRepository.findAll(businessId);
+      console.log(`[ProductStore] Found ${products.length} products`);
       set({ products, isHydrated: true });
     } catch (error) {
       console.error('[ProductStore] Failed to hydrate:', error);

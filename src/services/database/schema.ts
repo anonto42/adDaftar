@@ -4,7 +4,7 @@
  * Contains all SQL DDL statements for creating tables and indexes
  */
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const createBusinessTable = `
 CREATE TABLE IF NOT EXISTS business (
@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS sales (
   business_id TEXT NOT NULL,
   date TEXT NOT NULL,
   total_amount REAL NOT NULL,
+  received_amount REAL NOT NULL DEFAULT 0,
   type TEXT NOT NULL CHECK(type IN ('CASH', 'DUE')),
   customer_id TEXT,
   customer_name TEXT,

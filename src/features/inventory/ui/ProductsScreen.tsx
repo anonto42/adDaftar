@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Text, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,10 +6,11 @@ import { useTheme } from '@/src/shared/theme';
 import { useProductStore } from '../model/product.store';
 import { useCategoryStore } from '../model/category.store';
 import { useAppStore } from '@/src/features/settings';
+import { useBusinessStore } from '@/src/features/business';
 import { Product } from '@/src/shared/types/shop.types';
 import { PressableScale } from '@/src/shared/components/PressableScale';
 import { formatCurrency } from '@/src/shared/utils/format';
-import { SearchBar, ScreenHeader } from '@/src/shared/components';
+import { SearchBar, ScreenHeader, EmptyState } from '@/src/shared/components';
 
 export default function ProductsScreen() {
   const { theme } = useTheme();
@@ -17,12 +18,12 @@ export default function ProductsScreen() {
   const { products, addProduct, updateProduct, deleteProduct } = useProductStore();
   const { categories } = useCategoryStore();
   const { currency } = useAppStore();
+  const { activeBusiness } = useBusinessStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(products);
 
   // Form State
   const [name, setName] = useState('');
@@ -32,7 +33,7 @@ export default function ProductsScreen() {
   const [lowStockLevel, setLowStockLevel] = useState('5');
   const [categoryId, setCategoryId] = useState<string>('');
 
-  const filterProducts = useCallback(() => {
+  const filteredProducts = useMemo(() => {
     let filtered = products;
 
     // Filter by category
@@ -47,12 +48,8 @@ export default function ProductsScreen() {
       );
     }
 
-    setFilteredProducts(filtered);
+    return filtered;
   }, [products, selectedCategory, searchQuery]);
-
-  useEffect(() => {
-    filterProducts();
-  }, [filterProducts]);
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -136,6 +133,7 @@ export default function ProductsScreen() {
       <ScreenHeader 
         title="Products" 
         subtitle="Inventory" 
+        topTitle={activeBusiness?.name}
         icon="cube" 
       />
 
@@ -231,6 +229,16 @@ export default function ProductsScreen() {
             </PressableScale>
           );
         }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="cube-outline"
+            title="No products yet"
+            description={searchQuery ? "No products found matching your search." : "Start by adding products to your inventory."}
+            actionLabel={!searchQuery ? "Add Product" : undefined}
+            onAction={!searchQuery ? () => handleOpenModal() : undefined}
+            style={{ marginTop: 40 }}
+          />
+        }
       />
 
       <PressableScale

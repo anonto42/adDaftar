@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { Payment } from '@/src/shared/types/shop.types';
 import { paymentRepository } from '../api/payment.repository';
+import { useBusinessStore } from '../../business/model/business.store';
 
 interface PaymentState {
   payments: Payment[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
-  addPayment: (payment: Omit<Payment, 'id'>) => Promise<void>;
+  addPayment: (payment: Omit<Payment, 'id' | 'businessId'>) => Promise<void>;
   getPaymentsByCustomer: (customerId: string) => Promise<Payment[]>;
   getRecentPayments: (limit?: number) => Promise<Payment[]>;
   getTotalPayments: () => Promise<number>;
@@ -18,19 +19,31 @@ export const usePaymentStore = create<PaymentState>()((set, get) => ({
 
   // Load payments from SQLite database
   hydrate: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) {
+      set({ payments: [], isHydrated: true });
+      return;
+    }
+
     try {
-      const payments = await paymentRepository.findAll();
+      const payments = await paymentRepository.findAll(businessId);
       set({ payments, isHydrated: true });
     } catch (error) {
       console.error('[PaymentStore] Failed to hydrate:', error);
-      set({ isHydrated: true }); // Mark as hydrated even on error to prevent blocking
+      set({ isHydrated: true });
     }
   },
 
   // Add a new payment
   addPayment: async (paymentData) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) throw new Error('No active business');
+
     try {
-      const newPayment = await paymentRepository.create(paymentData);
+      const newPayment = await paymentRepository.create({
+        ...paymentData,
+        businessId,
+      });
       set((state) => ({
         payments: [newPayment, ...state.payments], // Add to beginning for chronological order
       }));
@@ -52,8 +65,11 @@ export const usePaymentStore = create<PaymentState>()((set, get) => ({
 
   // Get recent payments
   getRecentPayments: async (limit: number = 10) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await paymentRepository.getRecentPayments(limit);
+      return await paymentRepository.getRecentPayments(businessId, limit);
     } catch (error) {
       console.error('[PaymentStore] Failed to get recent payments:', error);
       return [];
@@ -62,8 +78,11 @@ export const usePaymentStore = create<PaymentState>()((set, get) => ({
 
   // Get total payments amount
   getTotalPayments: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return 0;
+
     try {
-      return await paymentRepository.getTotalPayments();
+      return await paymentRepository.getTotalPayments(businessId);
     } catch (error) {
       console.error('[PaymentStore] Failed to get total payments:', error);
       return 0;

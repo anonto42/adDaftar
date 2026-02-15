@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { Customer } from '@/src/shared/types/shop.types';
 import { customerRepository } from '../api/customer.repository';
+import { useBusinessStore } from '../../business/model/business.store';
 
 interface CustomerState {
   customers: Customer[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
-  addCustomer: (customer: Omit<Customer, 'id' | 'totalDue'>) => Promise<void>;
+  addCustomer: (customer: Omit<Customer, 'id' | 'businessId' | 'totalDue'>) => Promise<void>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
   getCustomer: (id: string) => Promise<Customer | null>;
@@ -22,8 +23,14 @@ export const useCustomerStore = create<CustomerState>()((set) => ({
 
   // Load customers from SQLite database
   hydrate: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) {
+      set({ customers: [], isHydrated: true });
+      return;
+    }
+
     try {
-      const customers = await customerRepository.findAll();
+      const customers = await customerRepository.findAll(businessId);
       set({ customers, isHydrated: true });
     } catch (error) {
       console.error('[CustomerStore] Failed to hydrate:', error);
@@ -33,9 +40,13 @@ export const useCustomerStore = create<CustomerState>()((set) => ({
 
   // Add a new customer
   addCustomer: async (customerData) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) throw new Error('No active business');
+
     try {
       const newCustomer = await customerRepository.create({
         ...customerData,
+        businessId,
         totalDue: 0,
       });
       set((state) => ({
@@ -100,8 +111,11 @@ export const useCustomerStore = create<CustomerState>()((set) => ({
 
   // Get customers with outstanding dues
   getCustomersWithDues: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await customerRepository.getCustomersWithDues();
+      return await customerRepository.getCustomersWithDues(businessId);
     } catch (error) {
       console.error('[CustomerStore] Failed to get customers with dues:', error);
       return [];
@@ -110,8 +124,11 @@ export const useCustomerStore = create<CustomerState>()((set) => ({
 
   // Search customers by name or phone
   searchCustomers: async (searchTerm: string) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await customerRepository.search(searchTerm);
+      return await customerRepository.search(businessId, searchTerm);
     } catch (error) {
       console.error('[CustomerStore] Failed to search customers:', error);
       return [];
@@ -120,8 +137,11 @@ export const useCustomerStore = create<CustomerState>()((set) => ({
 
   // Get total amount of all dues
   getTotalDues: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return 0;
+
     try {
-      return await customerRepository.getTotalDues();
+      return await customerRepository.getTotalDues(businessId);
     } catch (error) {
       console.error('[CustomerStore] Failed to get total dues:', error);
       return 0;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,7 @@ export default function OnboardingScreen() {
   
   const { t } = useI18n();
   const [step, setStep] = useState(1);
+  const [businessName, setBusinessName] = useState('');
 
   // Robust redirection
   useEffect(() => {
@@ -40,6 +41,20 @@ export default function OnboardingScreen() {
 
   const handleFinish = async () => {
     console.log('[Onboarding] Finishing onboarding action...');
+    
+    // Create or update default business name if provided
+    const { useBusinessStore } = await import('@/src/features/business');
+    const businessStore = useBusinessStore.getState();
+    
+    if (businessName.trim()) {
+      const activeBus = businessStore.getActiveBusiness();
+      if (activeBus) {
+        await businessStore.updateBusiness(activeBus.id, { name: businessName });
+      } else {
+        await businessStore.addBusiness({ name: businessName, description: 'My Business' });
+      }
+    }
+
     await setOnboardingComplete(true);
   };
 
@@ -140,6 +155,50 @@ export default function OnboardingScreen() {
 
       <PressableScale
         style={[styles.nextButton, { backgroundColor: theme.colors.primary }]}
+        onPress={() => setStep(3)}
+      >
+        <Text style={styles.nextButtonText}>{t('continue')}</Text>
+      </PressableScale>
+    </View>
+  );
+
+  const renderStep3 = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.iconCircle}>
+        <LinearGradient
+          colors={theme.gradients.primary as any}
+          style={styles.iconGradient}
+        >
+          <Ionicons name="business" size={48} color="white" />
+        </LinearGradient>
+      </View>
+      
+      <Text style={[styles.title, { color: theme.colors.text }]}>Business Info</Text>
+      <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+        Tell us the name of your shop or business.
+      </Text>
+
+      <View style={{ width: '100%', marginBottom: 40 }}>
+        <Text style={{ color: theme.colors.textSecondary, marginBottom: 8, fontWeight: '600' }}>Business Name</Text>
+        <TextInput
+          style={{ 
+            backgroundColor: theme.colors.card, 
+            color: theme.colors.text, 
+            padding: 16, 
+            borderRadius: 12, 
+            borderWidth: 1, 
+            borderColor: theme.colors.border,
+            fontSize: 18
+          }}
+          placeholder="e.g. My Awesome Shop"
+          placeholderTextColor={theme.colors.textTertiary}
+          value={businessName}
+          onChangeText={setBusinessName}
+        />
+      </View>
+
+      <PressableScale
+        style={[styles.nextButton, { backgroundColor: theme.colors.primary }]}
         onPress={handleFinish}
       >
         <Text style={styles.nextButtonText}>{t('get_started')}</Text>
@@ -151,7 +210,7 @@ export default function OnboardingScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {step === 1 ? renderStep1() : renderStep2()}
+        {step === 1 ? renderStep1() : step === 2 ? renderStep2() : renderStep3()}
       </ScrollView>
     </View>
   );

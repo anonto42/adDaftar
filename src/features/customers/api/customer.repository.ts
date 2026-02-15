@@ -16,12 +16,13 @@ export const customerRepository = {
     const now = new Date().toISOString();
 
     const sql = `
-      INSERT INTO customers (id, name, phone, address, total_due, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO customers (id, business_id, name, phone, address, total_due, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await executeStatement(sql, [
       id,
+      customerData.businessId,
       customerData.name,
       customerData.phone || null,
       customerData.address || null,
@@ -89,7 +90,7 @@ export const customerRepository = {
    */
   findById: async (id: string): Promise<Customer | null> => {
     const sql = `
-      SELECT id, name, phone, address, total_due as totalDue,
+      SELECT id, business_id as businessId, name, phone, address, total_due as totalDue,
              last_purchase_date as lastPurchaseDate, total_purchases as totalPurchases,
              purchase_count as purchaseCount
       FROM customers
@@ -100,17 +101,18 @@ export const customerRepository = {
   },
 
   /**
-   * Get all customers
+   * Get all customers for a business
    */
-  findAll: async (): Promise<Customer[]> => {
+  findAll: async (businessId: string): Promise<Customer[]> => {
     const sql = `
-      SELECT id, name, phone, address, total_due as totalDue,
+      SELECT id, business_id as businessId, name, phone, address, total_due as totalDue,
              last_purchase_date as lastPurchaseDate, total_purchases as totalPurchases,
              purchase_count as purchaseCount
       FROM customers
+      WHERE business_id = ?
       ORDER BY name ASC
     `;
-    const results = await executeQuery<Customer>(sql);
+    const results = await executeQuery<Customer>(sql, [businessId]);
     return results;
   },
 
@@ -129,35 +131,36 @@ export const customerRepository = {
   },
 
   /**
-   * Get customers with outstanding dues
+   * Get customers with outstanding dues for a business
    */
-  getCustomersWithDues: async (): Promise<Customer[]> => {
+  getCustomersWithDues: async (businessId: string): Promise<Customer[]> => {
     const sql = `
-      SELECT id, name, phone, address, total_due as totalDue,
+      SELECT id, business_id as businessId, name, phone, address, total_due as totalDue,
              last_purchase_date as lastPurchaseDate, total_purchases as totalPurchases,
              purchase_count as purchaseCount
       FROM customers
-      WHERE total_due > 0
+      WHERE business_id = ? AND total_due > 0
       ORDER BY total_due DESC, name ASC
     `;
-    const results = await executeQuery<Customer>(sql);
+    const results = await executeQuery<Customer>(sql, [businessId]);
     return results;
   },
 
   /**
-   * Search customers by name or phone
+   * Search customers by name or phone within a business
    */
-  search: async (searchTerm: string): Promise<Customer[]> => {
+  search: async (businessId: string, searchTerm: string): Promise<Customer[]> => {
     const sql = `
-      SELECT id, name, phone, address, total_due as totalDue,
+      SELECT id, business_id as businessId, name, phone, address, total_due as totalDue,
              last_purchase_date as lastPurchaseDate, total_purchases as totalPurchases,
              purchase_count as purchaseCount
       FROM customers
-      WHERE name LIKE ? OR phone LIKE ?
+      WHERE business_id = ? AND (name LIKE ? OR phone LIKE ?)
       ORDER BY name ASC
     `;
 
     const results = await executeQuery<Customer>(sql, [
+      businessId,
       `%${searchTerm}%`,
       `%${searchTerm}%`,
     ]);
@@ -182,11 +185,11 @@ export const customerRepository = {
   },
 
   /**
-   * Get total amount of all dues
+   * Get total amount of all dues for a business
    */
-  getTotalDues: async (): Promise<number> => {
-    const sql = 'SELECT SUM(total_due) as total FROM customers';
-    const result = await executeQuerySingle<{ total: number }>(sql);
+  getTotalDues: async (businessId: string): Promise<number> => {
+    const sql = 'SELECT SUM(total_due) as total FROM customers WHERE business_id = ?';
+    const result = await executeQuerySingle<{ total: number }>(sql, [businessId]);
     return result?.total || 0;
   },
 };

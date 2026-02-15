@@ -25,7 +25,8 @@ function RootLayoutNav() {
         const { initializeDatabase } = await import('@/src/services/database');
         const { runMigrationIfNeeded } = await import('@/src/services/database/migrations');
         const { runSchemaV2Migration } = await import('@/src/services/database/schema-v2-migration');
-        const { useProductStore, useCustomerStore, useSalesStore, useCategoryStore, usePaymentStore, useExpenseStore, useAppStore } = await import('@/src/store');
+        const { runSchemaV4Migration } = await import('@/src/services/database/schema-v4-migration');
+        const { useProductStore, useCustomerStore, useSalesStore, useCategoryStore, usePaymentStore, useExpenseStore, useAppStore, useBusinessStore } = await import('@/src/store');
 
         // 1. Initialize SQLite database
         console.log('[App] Initializing database...');
@@ -39,9 +40,14 @@ function RootLayoutNav() {
         console.log('[App] Running schema v2 migration if needed...');
         await runSchemaV2Migration();
 
-        // 4. Hydrate all stores from SQLite sequentially to avoid contention
+        // 4. Run multi-business migration
+        console.log('[App] Running multi-business migration if needed...');
+        await runSchemaV4Migration();
+
+        // 5. Hydrate all stores from SQLite sequentially to avoid contention
         console.log('[App] Hydrating stores...');
         await useAppStore.getState().hydrate();
+        await useBusinessStore.getState().hydrate();
         await useProductStore.getState().hydrate();
         await useCategoryStore.getState().hydrate();
         await useCustomerStore.getState().hydrate();

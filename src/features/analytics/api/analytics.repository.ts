@@ -14,9 +14,9 @@ import { executeQuery, executeQuerySingle } from '@/src/services/database';
 
 export const analyticsRepository = {
   /**
-   * Get sales trends for last N days
+   * Get sales trends for last N days for a business
    */
-  getSalesTrends: async (days: number = 7): Promise<SalesTrend[]> => {
+  getSalesTrends: async (businessId: string, days: number = 7): Promise<SalesTrend[]> => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
@@ -28,19 +28,19 @@ export const analyticsRepository = {
         SUM(profit) as profit,
         COUNT(*) as count
       FROM sales
-      WHERE date >= ?
+      WHERE business_id = ? AND date >= ?
       GROUP BY DATE(date)
       ORDER BY date ASC
     `;
 
-    const results = await executeQuery<SalesTrend>(sql, [startDate.toISOString()]);
+    const results = await executeQuery<SalesTrend>(sql, [businessId, startDate.toISOString()]);
     return results;
   },
 
   /**
-   * Get top selling products
+   * Get top selling products for a business
    */
-  getTopProducts: async (limit: number = 5): Promise<TopProduct[]> => {
+  getTopProducts: async (businessId: string, limit: number = 5): Promise<TopProduct[]> => {
     const sql = `
       SELECT
         si.product_id as productId,
@@ -49,18 +49,20 @@ export const analyticsRepository = {
         SUM(si.total) as revenue,
         SUM(si.profit) as profit
       FROM sale_items si
+      JOIN sales s ON si.sale_id = s.id
+      WHERE s.business_id = ?
       GROUP BY si.product_id, si.product_name
       ORDER BY totalSold DESC
       LIMIT ?
     `;
 
-    return await executeQuery<TopProduct>(sql, [limit]);
+    return await executeQuery<TopProduct>(sql, [businessId, limit]);
   },
 
   /**
-   * Get top customers by purchase amount
+   * Get top customers by purchase amount for a business
    */
-  getTopCustomers: async (limit: number = 5): Promise<TopCustomer[]> => {
+  getTopCustomers: async (businessId: string, limit: number = 5): Promise<TopCustomer[]> => {
     const sql = `
       SELECT
         c.id as customerId,
@@ -68,46 +70,47 @@ export const analyticsRepository = {
         c.total_purchases as totalPurchases,
         c.purchase_count as purchaseCount
       FROM customers c
-      WHERE c.purchase_count > 0
+      WHERE c.business_id = ? AND c.purchase_count > 0
       ORDER BY c.total_purchases DESC
       LIMIT ?
     `;
 
-    return await executeQuery<TopCustomer>(sql, [limit]);
+    return await executeQuery<TopCustomer>(sql, [businessId, limit]);
   },
 
   /**
-   * Get products with low stock
+   * Get products with low stock for a business
    */
-  getLowStockProducts: async () => {
+  getLowStockProducts: async (businessId: string) => {
     const sql = `
       SELECT id, name, quantity, price, low_stock_level as lowStockLevel
       FROM products
-      WHERE quantity <= low_stock_level
+      WHERE business_id = ? AND quantity <= low_stock_level
       ORDER BY quantity ASC
     `;
 
-    return await executeQuery(sql);
+    return await executeQuery(sql, [businessId]);
   },
 
   /**
-   * Get total inventory value (quantity × cost_price)
+   * Get total inventory value for a business (quantity × cost_price)
    */
-  getInventoryValue: async (): Promise<number> => {
+  getInventoryValue: async (businessId: string): Promise<number> => {
     const sql = `
       SELECT SUM(quantity * cost_price) as total
       FROM products
-      WHERE cost_price > 0
+      WHERE business_id = ? AND cost_price > 0
     `;
 
-    const result = await executeQuerySingle<{ total: number }>(sql);
+    const result = await executeQuerySingle<{ total: number }>(sql, [businessId]);
     return result?.total || 0;
   },
 
   /**
-   * Get financial summary for date range
+   * Get financial summary for date range and business
    */
   getFinancialSummary: async (
+    businessId: string,
     startDate: string,
     endDate: string
   ): Promise<FinancialSummary> => {
@@ -118,25 +121,25 @@ export const analyticsRepository = {
         SUM(profit) as totalProfit,
         COUNT(*) as salesCount
       FROM sales
-      WHERE date >= ? AND date <= ?
+      WHERE business_id = ? AND date >= ? AND date <= ?
     `;
 
     const salesData = await executeQuerySingle<{
       totalSales: number;
       totalProfit: number;
       salesCount: number;
-    }>(salesSql, [startDate, endDate]);
+    }>(salesSql, [businessId, startDate, endDate]);
 
     // Get expenses data
     const expensesSql = `
       SELECT SUM(amount) as totalExpenses
       FROM expenses
-      WHERE expense_date >= ? AND expense_date <= ?
+      WHERE business_id = ? AND expense_date >= ? AND expense_date <= ?
     `;
 
     const expensesData = await executeQuerySingle<{ totalExpenses: number }>(
       expensesSql,
-      [startDate, endDate]
+      [businessId, startDate, endDate]
     );
 
     const totalSales = salesData?.totalSales || 0;
@@ -154,9 +157,9 @@ export const analyticsRepository = {
   },
 
   /**
-   * Get today's summary
+   * Get today's summary for a business
    */
-  getTodaysSummary: async (): Promise<FinancialSummary> => {
+  getTodaysSummary: async (businessId: string): Promise<FinancialSummary> => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startOfDay = today.toISOString();
@@ -164,19 +167,20 @@ export const analyticsRepository = {
     today.setHours(23, 59, 59, 999);
     const endOfDay = today.toISOString();
 
-    return analyticsRepository.getFinancialSummary(startOfDay, endOfDay);
+    return analyticsRepository.getFinancialSummary(businessId, startOfDay, endOfDay);
   },
 
   /**
-   * Get recent sales
+   * Get recent sales for a business
    */
-  getRecentSales: async (limit: number = 10): Promise<Sale[]> => {
+  getRecentSales: async (businessId: string, limit: number = 10): Promise<Sale[]> => {
     const sql = `
       SELECT id, date, total_amount as totalAmount, type, customer_name as customerName, notes
       FROM sales
+      WHERE business_id = ?
       ORDER BY date DESC
       LIMIT ?
     `;
-    return await executeQuery<Sale>(sql, [limit]);
+    return await executeQuery<Sale>(sql, [businessId, limit]);
   },
 };

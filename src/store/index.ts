@@ -10,3 +10,4 @@ export { useProductStore, useCategoryStore } from '@/src/features/inventory';
 export { useCustomerStore, usePaymentStore } from '@/src/features/customers';
 export { useSalesStore } from '@/src/features/sales';
 export { useExpenseStore } from '@/src/features/expenses';
+export { useBusinessStore } from '@/src/features/business';

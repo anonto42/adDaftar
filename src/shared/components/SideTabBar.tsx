@@ -16,7 +16,6 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SIDEBAR_WIDTH = 85;
 const TAG_WIDTH = 12;
 const TAG_HEIGHT = 70;
@@ -51,9 +50,8 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
   // --- Gesture Logic ---
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
-      // Only allow activation if sidebar is closed & touch starts in left 50% 
-      // OR if sidebar is already open (to swipe it closed)
-      if (!isOpen && e.startLocationX > SCREEN_WIDTH * 0.5) return;
+      // Only allow activation if sidebar is closed
+      if (!isOpen && e.translationX < 0) return;
 
       const progress = isOpen 
         ? 1 + e.translationX / SIDEBAR_WIDTH 

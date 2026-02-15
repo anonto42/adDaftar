@@ -8,6 +8,7 @@ import { useCustomerStore } from '@/src/features/customers';
 import { useProductStore } from '@/src/features/inventory';
 import { useAppStore } from '@/src/features/settings';
 import { useI18n } from '@/src/shared/i18n';
+import { useBusinessStore } from '@/src/features/business';
 import { analyticsRepository } from '@/src/features/analytics';
 import { SalesTrend, Product, Sale } from '@/src/shared/types/shop.types';
 import { formatCurrency } from '@/src/shared/utils/format';
@@ -21,6 +22,7 @@ export default function DashboardScreen() {
   const { getTotalDues } = useCustomerStore();
   const { products } = useProductStore();
   const { currency } = useAppStore();
+  const { activeBusinessId } = useBusinessStore();
   const { t } = useI18n();
 
   const [todaysSales, setTodaysSales] = useState(0);
@@ -31,9 +33,11 @@ export default function DashboardScreen() {
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
 
   const loadDashboardData = useCallback(async () => {
+    if (!activeBusinessId) return;
+
     try {
       // Get today's summary
-      const todaySummary = await analyticsRepository.getTodaysSummary();
+      const todaySummary = await analyticsRepository.getTodaysSummary(activeBusinessId);
       setTodaysSales(todaySummary.totalSales);
       setTodaysProfit(todaySummary.totalProfit);
 
@@ -42,20 +46,20 @@ export default function DashboardScreen() {
       setTotalDue(dues);
 
       // Get 7-day sales trends
-      const trends = await analyticsRepository.getSalesTrends(7);
+      const trends = await analyticsRepository.getSalesTrends(activeBusinessId, 7);
       setSalesTrends(trends);
 
       // Get low stock products
-      const lowStock = await analyticsRepository.getLowStockProducts();
-      setLowStockProducts(lowStock.slice(0, 5)); // Show top 5
+      const lowStock = await analyticsRepository.getLowStockProducts(activeBusinessId);
+      setLowStockProducts(lowStock.slice(0, 5) as Product[]); // Show top 5
 
       // Get recent sales
-      const recent = await analyticsRepository.getRecentSales(5);
+      const recent = await analyticsRepository.getRecentSales(activeBusinessId, 5);
       setRecentSales(recent);
     } catch (error) {
       console.error('[Dashboard] Failed to load data:', error);
     }
-  }, [getTotalDues]);
+  }, [activeBusinessId, getTotalDues]);
 
   useEffect(() => {
     loadDashboardData();

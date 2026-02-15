@@ -29,12 +29,13 @@ export const salesRepository = {
       const database = getDatabase();
       // 1. Insert sale record
       const insertSaleSql = `
-        INSERT INTO sales (id, date, total_amount, type, customer_id, customer_name, discount, payment_method, profit, notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sales (id, business_id, date, total_amount, type, customer_id, customer_name, discount, payment_method, profit, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       await database.runAsync(insertSaleSql, [
         id,
+        saleData.businessId,
         now,
         saleData.totalAmount,
         saleData.type,
@@ -143,18 +144,19 @@ export const salesRepository = {
   },
 
   /**
-   * Get all sales
+   * Get all sales for a business
    */
-  findAll: async (): Promise<Sale[]> => {
+  findAll: async (businessId: string): Promise<Sale[]> => {
     const sql = `
-      SELECT id, date, total_amount as totalAmount, type, customer_id as customerId,
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId,
              customer_name as customerName, discount, payment_method as paymentMethod,
              profit, notes
       FROM sales
+      WHERE business_id = ?
       ORDER BY date DESC
     `;
 
-    const sales = await executeQuery<Omit<Sale, 'items'>>(sql);
+    const sales = await executeQuery<Omit<Sale, 'items'>>(sql, [businessId]);
 
     // Fetch items for each sale
     const salesWithItems = await Promise.all(
@@ -175,7 +177,7 @@ export const salesRepository = {
    */
   findById: async (id: string): Promise<Sale | null> => {
     const sql = `
-      SELECT id, date, total_amount as totalAmount, type, customer_id as customerId,
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId,
              customer_name as customerName, discount, payment_method as paymentMethod,
              profit, notes
       FROM sales
@@ -219,7 +221,7 @@ export const salesRepository = {
    */
   getSalesByCustomer: async (customerId: string): Promise<Sale[]> => {
     const sql = `
-      SELECT id, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
       FROM sales
       WHERE customer_id = ?
       ORDER BY date DESC
@@ -242,17 +244,17 @@ export const salesRepository = {
   },
 
   /**
-   * Get sales by type (CASH or DUE)
+   * Get sales by type (CASH or DUE) within a business
    */
-  getSalesByType: async (type: 'CASH' | 'DUE'): Promise<Sale[]> => {
+  getSalesByType: async (businessId: string, type: 'CASH' | 'DUE'): Promise<Sale[]> => {
     const sql = `
-      SELECT id, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
       FROM sales
-      WHERE type = ?
+      WHERE business_id = ? AND type = ?
       ORDER BY date DESC
     `;
 
-    const sales = await executeQuery<Omit<Sale, 'items'>>(sql, [type]);
+    const sales = await executeQuery<Omit<Sale, 'items'>>(sql, [businessId, type]);
 
     const salesWithItems = await Promise.all(
       sales.map(async (sale) => {
@@ -268,17 +270,17 @@ export const salesRepository = {
   },
 
   /**
-   * Get sales within a date range
+   * Get sales within a date range for a business
    */
-  getSalesByDateRange: async (startDate: string, endDate: string): Promise<Sale[]> => {
+  getSalesByDateRange: async (businessId: string, startDate: string, endDate: string): Promise<Sale[]> => {
     const sql = `
-      SELECT id, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
+      SELECT id, business_id as businessId, date, total_amount as totalAmount, type, customer_id as customerId, customer_name as customerName
       FROM sales
-      WHERE date >= ? AND date <= ?
+      WHERE business_id = ? AND date >= ? AND date <= ?
       ORDER BY date DESC
     `;
 
-    const sales = await executeQuery<Omit<Sale, 'items'>>(sql, [startDate, endDate]);
+    const sales = await executeQuery<Omit<Sale, 'items'>>(sql, [businessId, startDate, endDate]);
 
     const salesWithItems = await Promise.all(
       sales.map(async (sale) => {
@@ -294,9 +296,9 @@ export const salesRepository = {
   },
 
   /**
-   * Get today's sales
+   * Get today's sales for a business
    */
-  getTodaysSales: async (): Promise<Sale[]> => {
+  getTodaysSales: async (businessId: string): Promise<Sale[]> => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startOfDay = today.toISOString();
@@ -304,22 +306,22 @@ export const salesRepository = {
     today.setHours(23, 59, 59, 999);
     const endOfDay = today.toISOString();
 
-    return salesRepository.getSalesByDateRange(startOfDay, endOfDay);
+    return salesRepository.getSalesByDateRange(businessId, startOfDay, endOfDay);
   },
 
   /**
-   * Get total sales amount
+   * Get total sales amount for a business
    */
-  getTotalSalesAmount: async (): Promise<number> => {
-    const sql = 'SELECT SUM(total_amount) as total FROM sales';
-    const result = await executeQuerySingle<{ total: number }>(sql);
+  getTotalSalesAmount: async (businessId: string): Promise<number> => {
+    const sql = 'SELECT SUM(total_amount) as total FROM sales WHERE business_id = ?';
+    const result = await executeQuerySingle<{ total: number }>(sql, [businessId]);
     return result?.total || 0;
   },
 
   /**
-   * Get today's sales total
+   * Get today's sales total for a business
    */
-  getTodaysSalesTotal: async (): Promise<number> => {
+  getTodaysSalesTotal: async (businessId: string): Promise<number> => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startOfDay = today.toISOString();
@@ -330,10 +332,11 @@ export const salesRepository = {
     const sql = `
       SELECT SUM(total_amount) as total
       FROM sales
-      WHERE date >= ? AND date <= ?
+      WHERE business_id = ? AND date >= ? AND date <= ?
     `;
 
     const result = await executeQuerySingle<{ total: number }>(sql, [
+      businessId,
       startOfDay,
       endOfDay,
     ]);

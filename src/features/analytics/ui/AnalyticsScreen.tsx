@@ -4,6 +4,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/shared/theme';
 import { useAppStore } from '@/src/features/settings';
+import { useBusinessStore } from '@/src/features/business';
 import { analyticsRepository } from '../api/analytics.repository';
 import { expenseRepository } from '@/src/features/expenses';
 import { SalesTrend, TopProduct, TopCustomer, FinancialSummary } from '@/src/shared/types/shop.types';
@@ -16,6 +17,7 @@ export default function AnalyticsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { currency } = useAppStore();
+  const { activeBusinessId } = useBusinessStore();
 
   const [salesTrends, setSalesTrends] = useState<SalesTrend[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -25,6 +27,8 @@ export default function AnalyticsScreen() {
   const [totalExpenses, setTotalExpenses] = useState(0);
 
   const loadAnalytics = useCallback(async () => {
+    if (!activeBusinessId) return;
+
     try {
       // Get date range based on selected period
       const endDate = new Date();
@@ -38,14 +42,16 @@ export default function AnalyticsScreen() {
 
       // Load all analytics data
       const [trends, products, customers, summary, expenses] = await Promise.all([
-        analyticsRepository.getSalesTrends(selectedPeriod === 'week' ? 7 : 30),
-        analyticsRepository.getTopProducts(5),
-        analyticsRepository.getTopCustomers(5),
+        analyticsRepository.getSalesTrends(activeBusinessId, selectedPeriod === 'week' ? 7 : 30),
+        analyticsRepository.getTopProducts(activeBusinessId, 5),
+        analyticsRepository.getTopCustomers(activeBusinessId, 5),
         analyticsRepository.getFinancialSummary(
+          activeBusinessId,
           startDate.toISOString(),
           endDate.toISOString()
         ),
         expenseRepository.getExpensesByDateRange(
+          activeBusinessId,
           startDate.toISOString(),
           endDate.toISOString()
         ),
@@ -61,7 +67,7 @@ export default function AnalyticsScreen() {
     } catch (error) {
       console.error('[Analytics] Failed to load data:', error);
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, activeBusinessId]);
 
   useEffect(() => {
     loadAnalytics();

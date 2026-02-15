@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { Product } from '@/src/shared/types/shop.types';
 import { productRepository } from '../api/product.repository';
+import { useBusinessStore } from '../../business/model/business.store';
 
 interface ProductState {
   products: Product[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id' | 'businessId'>) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   getProduct: (id: string) => Product | undefined;
@@ -21,19 +22,31 @@ export const useProductStore = create<ProductState>()((set, get) => ({
 
   // Load products from SQLite database
   hydrate: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) {
+      set({ products: [], isHydrated: true });
+      return;
+    }
+
     try {
-      const products = await productRepository.findAll();
+      const products = await productRepository.findAll(businessId);
       set({ products, isHydrated: true });
     } catch (error) {
       console.error('[ProductStore] Failed to hydrate:', error);
-      set({ isHydrated: true }); // Mark as hydrated even on error to prevent blocking
+      set({ isHydrated: true });
     }
   },
 
   // Add a new product
   addProduct: async (productData) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) throw new Error('No active business');
+
     try {
-      const newProduct = await productRepository.create(productData);
+      const newProduct = await productRepository.create({
+        ...productData,
+        businessId,
+      });
       set((state) => ({
         products: [...state.products, newProduct],
       }));
@@ -74,8 +87,11 @@ export const useProductStore = create<ProductState>()((set, get) => ({
 
   // Search products by name
   searchByName: async (searchTerm: string) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await productRepository.searchByName(searchTerm);
+      return await productRepository.searchByName(businessId, searchTerm);
     } catch (error) {
       console.error('[ProductStore] Failed to search products:', error);
       return [];
@@ -84,8 +100,11 @@ export const useProductStore = create<ProductState>()((set, get) => ({
 
   // Get products with low stock (using their own lowStockLevel)
   getLowStock: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await productRepository.getLowStock();
+      return await productRepository.getLowStock(businessId);
     } catch (error) {
       console.error('[ProductStore] Failed to get low stock products:', error);
       return [];
@@ -94,8 +113,11 @@ export const useProductStore = create<ProductState>()((set, get) => ({
 
   // Get products by category
   getByCategory: async (categoryId: string) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await productRepository.getByCategory(categoryId);
+      return await productRepository.getByCategory(businessId, categoryId);
     } catch (error) {
       console.error('[ProductStore] Failed to get products by category:', error);
       return [];

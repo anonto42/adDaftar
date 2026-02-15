@@ -83,7 +83,7 @@ export default function CategoriesScreen() {
       return;
     }
 
-    const categoryData: Omit<Category, 'id'> = {
+    const categoryData: Omit<Category, 'id' | 'businessId'> = {
       name: name.trim(),
       description: description.trim() || undefined,
       icon: selectedIcon,

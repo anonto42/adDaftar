@@ -111,6 +111,15 @@ export default function SettingsScreen() {
       }} />
       
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+        <SettingSection title="Business Management">
+          <SettingItem 
+            icon="business-outline" 
+            title="Manage Businesses" 
+            onPress={() => router.push('/business')}
+            isLast={true}
+          />
+        </SettingSection>
+
         <SettingSection title="Appearance">
           <SettingItem 
             icon="color-palette-outline" 

@@ -103,7 +103,7 @@ export default function ExpensesScreen() {
       return;
     }
 
-    const expenseData: Omit<Expense, 'id'> = {
+    const expenseData: Omit<Expense, 'id' | 'businessId'> = {
       description: description.trim(),
       amount: parsedAmount,
       category,

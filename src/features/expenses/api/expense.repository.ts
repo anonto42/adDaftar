@@ -12,12 +12,13 @@ export const expenseRepository = {
     const now = new Date().toISOString();
 
     const sql = `
-      INSERT INTO expenses (id, description, amount, category, expense_date, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO expenses (id, business_id, description, amount, category, expense_date, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await executeStatement(sql, [
       id,
+      expenseData.businessId,
       expenseData.description,
       expenseData.amount,
       expenseData.category,
@@ -73,63 +74,64 @@ export const expenseRepository = {
 
   findById: async (id: string): Promise<Expense | null> => {
     const sql = `
-      SELECT id, description, amount, category, expense_date as expenseDate, notes
+      SELECT id, business_id as businessId, description, amount, category, expense_date as expenseDate, notes
       FROM expenses WHERE id = ?
     `;
     return await executeQuerySingle<Expense>(sql, [id]);
   },
 
-  findAll: async (): Promise<Expense[]> => {
+  findAll: async (businessId: string): Promise<Expense[]> => {
     const sql = `
-      SELECT id, description, amount, category, expense_date as expenseDate, notes
+      SELECT id, business_id as businessId, description, amount, category, expense_date as expenseDate, notes
       FROM expenses
+      WHERE business_id = ?
       ORDER BY expense_date DESC
     `;
-    return await executeQuery<Expense>(sql);
+    return await executeQuery<Expense>(sql, [businessId]);
   },
 
-  getExpensesByDateRange: async (startDate: string, endDate: string): Promise<Expense[]> => {
+  getExpensesByDateRange: async (businessId: string, startDate: string, endDate: string): Promise<Expense[]> => {
     const sql = `
-      SELECT id, description, amount, category, expense_date as expenseDate, notes
+      SELECT id, business_id as businessId, description, amount, category, expense_date as expenseDate, notes
       FROM expenses
-      WHERE expense_date >= ? AND expense_date <= ?
+      WHERE business_id = ? AND expense_date >= ? AND expense_date <= ?
       ORDER BY expense_date DESC
     `;
-    return await executeQuery<Expense>(sql, [startDate, endDate]);
+    return await executeQuery<Expense>(sql, [businessId, startDate, endDate]);
   },
 
-  getExpensesByCategory: async (category: ExpenseCategory): Promise<Expense[]> => {
+  getExpensesByCategory: async (businessId: string, category: ExpenseCategory): Promise<Expense[]> => {
     const sql = `
-      SELECT id, description, amount, category, expense_date as expenseDate, notes
+      SELECT id, business_id as businessId, description, amount, category, expense_date as expenseDate, notes
       FROM expenses
-      WHERE category = ?
+      WHERE business_id = ? AND category = ?
       ORDER BY expense_date DESC
     `;
-    return await executeQuery<Expense>(sql, [category]);
+    return await executeQuery<Expense>(sql, [businessId, category]);
   },
 
-  getTotalExpenses: async (): Promise<number> => {
-    const sql = 'SELECT SUM(amount) as total FROM expenses';
-    const result = await executeQuerySingle<{ total: number }>(sql);
+  getTotalExpenses: async (businessId: string): Promise<number> => {
+    const sql = 'SELECT SUM(amount) as total FROM expenses WHERE business_id = ?';
+    const result = await executeQuerySingle<{ total: number }>(sql, [businessId]);
     return result?.total || 0;
   },
 
-  getMonthlyExpenses: async (month: number, year: number): Promise<Expense[]> => {
+  getMonthlyExpenses: async (businessId: string, month: number, year: number): Promise<Expense[]> => {
     const startDate = new Date(year, month - 1, 1).toISOString();
     const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
-    return expenseRepository.getExpensesByDateRange(startDate, endDate);
+    return expenseRepository.getExpensesByDateRange(businessId, startDate, endDate);
   },
 
-  getMonthlyTotal: async (month: number, year: number): Promise<number> => {
+  getMonthlyTotal: async (businessId: string, month: number, year: number): Promise<number> => {
     const startDate = new Date(year, month - 1, 1).toISOString();
     const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
 
     const sql = `
       SELECT SUM(amount) as total
       FROM expenses
-      WHERE expense_date >= ? AND expense_date <= ?
+      WHERE business_id = ? AND expense_date >= ? AND expense_date <= ?
     `;
-    const result = await executeQuerySingle<{ total: number }>(sql, [startDate, endDate]);
+    const result = await executeQuerySingle<{ total: number }>(sql, [businessId, startDate, endDate]);
     return result?.total || 0;
   },
 };

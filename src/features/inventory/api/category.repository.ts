@@ -12,12 +12,13 @@ export const categoryRepository = {
     const now = new Date().toISOString();
 
     const sql = `
-      INSERT INTO categories (id, name, description, icon, color, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO categories (id, business_id, name, description, icon, color, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await executeStatement(sql, [
       id,
+      categoryData.businessId,
       categoryData.name,
       categoryData.description || null,
       categoryData.icon || null,
@@ -67,13 +68,13 @@ export const categoryRepository = {
   },
 
   findById: async (id: string): Promise<Category | null> => {
-    const sql = 'SELECT id, name, description, icon, color FROM categories WHERE id = ?';
+    const sql = 'SELECT id, business_id as businessId, name, description, icon, color FROM categories WHERE id = ?';
     return await executeQuerySingle<Category>(sql, [id]);
   },
 
-  findAll: async (): Promise<Category[]> => {
-    const sql = 'SELECT id, name, description, icon, color FROM categories ORDER BY name ASC';
-    return await executeQuery<Category>(sql);
+  findAll: async (businessId: string): Promise<Category[]> => {
+    const sql = 'SELECT id, business_id as businessId, name, description, icon, color FROM categories WHERE business_id = ? ORDER BY name ASC';
+    return await executeQuery<Category>(sql, [businessId]);
   },
 
   getProductCount: async (categoryId: string): Promise<number> => {

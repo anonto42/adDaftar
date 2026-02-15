@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { Expense, ExpenseCategory } from '@/src/shared/types/shop.types';
 import { expenseRepository } from '../api/expense.repository';
+import { useBusinessStore } from '../../business/model/business.store';
 
 interface ExpenseState {
   expenses: Expense[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
-  addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id' | 'businessId'>) => Promise<void>;
   updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   getExpense: (id: string) => Expense | undefined;
@@ -23,8 +24,14 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
   // Load expenses from SQLite database
   hydrate: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) {
+      set({ expenses: [], isHydrated: true });
+      return;
+    }
+
     try {
-      const expenses = await expenseRepository.findAll();
+      const expenses = await expenseRepository.findAll(businessId);
       set({ expenses, isHydrated: true });
     } catch (error) {
       console.error('[ExpenseStore] Failed to hydrate:', error);
@@ -34,8 +41,14 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
   // Add a new expense
   addExpense: async (expenseData) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) throw new Error('No active business');
+
     try {
-      const newExpense = await expenseRepository.create(expenseData);
+      const newExpense = await expenseRepository.create({
+        ...expenseData,
+        businessId,
+      });
       set((state) => ({
         expenses: [newExpense, ...state.expenses], // Add to beginning for chronological order
       }));
@@ -76,8 +89,11 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
   // Get expenses by category
   getExpensesByCategory: async (category: ExpenseCategory) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await expenseRepository.getExpensesByCategory(category);
+      return await expenseRepository.getExpensesByCategory(businessId, category);
     } catch (error) {
       console.error('[ExpenseStore] Failed to get expenses by category:', error);
       return [];
@@ -86,8 +102,11 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
   // Get expenses by date range
   getExpensesByDateRange: async (startDate: string, endDate: string) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await expenseRepository.getExpensesByDateRange(startDate, endDate);
+      return await expenseRepository.getExpensesByDateRange(businessId, startDate, endDate);
     } catch (error) {
       console.error('[ExpenseStore] Failed to get expenses by date range:', error);
       return [];
@@ -96,8 +115,11 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
   // Get expenses for a specific month
   getMonthlyExpenses: async (month: number, year: number) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return [];
+
     try {
-      return await expenseRepository.getMonthlyExpenses(month, year);
+      return await expenseRepository.getMonthlyExpenses(businessId, month, year);
     } catch (error) {
       console.error('[ExpenseStore] Failed to get monthly expenses:', error);
       return [];
@@ -106,8 +128,11 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
   // Get total expenses for a specific month
   getMonthlyTotal: async (month: number, year: number) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return 0;
+
     try {
-      return await expenseRepository.getMonthlyTotal(month, year);
+      return await expenseRepository.getMonthlyTotal(businessId, month, year);
     } catch (error) {
       console.error('[ExpenseStore] Failed to get monthly total:', error);
       return 0;
@@ -116,8 +141,11 @@ export const useExpenseStore = create<ExpenseState>()((set, get) => ({
 
   // Get total expenses
   getTotalExpenses: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) return 0;
+
     try {
-      return await expenseRepository.getTotalExpenses();
+      return await expenseRepository.getTotalExpenses(businessId);
     } catch (error) {
       console.error('[ExpenseStore] Failed to get total expenses:', error);
       return 0;

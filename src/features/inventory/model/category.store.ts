@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { Category } from '@/src/shared/types/shop.types';
 import { categoryRepository } from '../api/category.repository';
+import { useBusinessStore } from '../../business/model/business.store';
 
 interface CategoryState {
   categories: Category[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
-  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id' | 'businessId'>) => Promise<void>;
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   getCategory: (id: string) => Category | undefined;
@@ -19,19 +20,31 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
 
   // Load categories from SQLite database
   hydrate: async () => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) {
+      set({ categories: [], isHydrated: true });
+      return;
+    }
+
     try {
-      const categories = await categoryRepository.findAll();
+      const categories = await categoryRepository.findAll(businessId);
       set({ categories, isHydrated: true });
     } catch (error) {
       console.error('[CategoryStore] Failed to hydrate:', error);
-      set({ isHydrated: true }); // Mark as hydrated even on error to prevent blocking
+      set({ isHydrated: true });
     }
   },
 
   // Add a new category
   addCategory: async (categoryData) => {
+    const businessId = useBusinessStore.getState().activeBusinessId;
+    if (!businessId) throw new Error('No active business');
+
     try {
-      const newCategory = await categoryRepository.create(categoryData);
+      const newCategory = await categoryRepository.create({
+        ...categoryData,
+        businessId,
+      });
       set((state) => ({
         categories: [...state.categories, newCategory],
       }));

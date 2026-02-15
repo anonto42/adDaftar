@@ -1,15 +1,24 @@
 // ============ Categories ============
 export interface Category {
   id: string;
+  businessId: string;
   name: string;
   description?: string;
   icon?: string;  // Ionicons name
   color?: string; // Hex color
 }
 
+// ============ Business ============
+export interface Business {
+  id: string;
+  name: string;
+  description: string
+}
+
 // ============ Products ============
 export interface Product {
   id: string;
+  businessId: string;
   name: string;
   quantity: number;
   price: number;
@@ -22,6 +31,7 @@ export interface Product {
 // ============ Customers ============
 export interface Customer {
   id: string;
+  businessId: string;
   name: string;
   phone?: string;
   address?: string;
@@ -44,6 +54,7 @@ export interface SaleItem {
 
 export interface Sale {
   id: string;
+  businessId: string;
   date: string; // ISO string
   items: SaleItem[];
   totalAmount: number;
@@ -59,6 +70,7 @@ export interface Sale {
 // ============ Payments ============
 export interface Payment {
   id: string;
+  businessId: string;
   customerId: string;
   amount: number;
   paymentDate: string;
@@ -71,6 +83,7 @@ export type ExpenseCategory = 'RENT' | 'UTILITIES' | 'SALARY' | 'WAGES' | 'SUPPL
 
 export interface Expense {
   id: string;
+  businessId: string;
   description: string;
   amount: number;
   category: ExpenseCategory;

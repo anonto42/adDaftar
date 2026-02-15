@@ -99,7 +99,7 @@ export default function ProductsScreen() {
       return;
     }
 
-    const productData: Omit<Product, 'id'> = {
+    const productData: Omit<Product, 'id' | 'businessId'> = {
       name: name.trim(),
       price: parsedPrice,
       quantity: parsedQuantity,

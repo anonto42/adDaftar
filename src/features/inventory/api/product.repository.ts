@@ -16,12 +16,13 @@ export const productRepository = {
     const now = new Date().toISOString();
 
     const sql = `
-      INSERT INTO products (id, name, quantity, price, category_id, cost_price, low_stock_level, image_uri, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (id, business_id, name, quantity, price, category_id, cost_price, low_stock_level, image_uri, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await executeStatement(sql, [
       id,
+      productData.businessId,
       productData.name,
       productData.quantity,
       productData.price,
@@ -106,7 +107,7 @@ export const productRepository = {
    */
   findById: async (id: string): Promise<Product | null> => {
     const sql = `
-      SELECT id, name, quantity, price, category_id as categoryId,
+      SELECT id, business_id as businessId, name, quantity, price, category_id as categoryId,
              cost_price as costPrice, low_stock_level as lowStockLevel, image_uri as imageUri
       FROM products WHERE id = ?
     `;
@@ -115,15 +116,15 @@ export const productRepository = {
   },
 
   /**
-   * Get all products
+   * Get all products for a business
    */
-  findAll: async (): Promise<Product[]> => {
+  findAll: async (businessId: string): Promise<Product[]> => {
     const sql = `
-      SELECT id, name, quantity, price, category_id as categoryId,
+      SELECT id, business_id as businessId, name, quantity, price, category_id as categoryId,
              cost_price as costPrice, low_stock_level as lowStockLevel, image_uri as imageUri
-      FROM products ORDER BY name ASC
+      FROM products WHERE business_id = ? ORDER BY name ASC
     `;
-    const results = await executeQuery<Product>(sql);
+    const results = await executeQuery<Product>(sql, [businessId]);
     return results;
   },
 
@@ -142,50 +143,50 @@ export const productRepository = {
   },
 
   /**
-   * Search products by name
+   * Search products by name within a business
    */
-  searchByName: async (searchTerm: string): Promise<Product[]> => {
+  searchByName: async (businessId: string, searchTerm: string): Promise<Product[]> => {
     const sql = `
-      SELECT id, name, quantity, price, category_id as categoryId,
+      SELECT id, business_id as businessId, name, quantity, price, category_id as categoryId,
              cost_price as costPrice, low_stock_level as lowStockLevel, image_uri as imageUri
       FROM products
-      WHERE name LIKE ?
+      WHERE business_id = ? AND name LIKE ?
       ORDER BY name ASC
     `;
 
-    const results = await executeQuery<Product>(sql, [`%${searchTerm}%`]);
+    const results = await executeQuery<Product>(sql, [businessId, `%${searchTerm}%`]);
     return results;
   },
 
   /**
-   * Get products with low stock (using their own low_stock_level)
+   * Get products with low stock for a business
    */
-  getLowStock: async (): Promise<Product[]> => {
+  getLowStock: async (businessId: string): Promise<Product[]> => {
     const sql = `
-      SELECT id, name, quantity, price, category_id as categoryId,
+      SELECT id, business_id as businessId, name, quantity, price, category_id as categoryId,
              cost_price as costPrice, low_stock_level as lowStockLevel, image_uri as imageUri
       FROM products
-      WHERE quantity <= low_stock_level
+      WHERE business_id = ? AND quantity <= low_stock_level
       ORDER BY quantity ASC, name ASC
     `;
 
-    const results = await executeQuery<Product>(sql);
+    const results = await executeQuery<Product>(sql, [businessId]);
     return results;
   },
 
   /**
-   * Get products by category
+   * Get products by category within a business
    */
-  getByCategory: async (categoryId: string): Promise<Product[]> => {
+  getByCategory: async (businessId: string, categoryId: string): Promise<Product[]> => {
     const sql = `
-      SELECT id, name, quantity, price, category_id as categoryId,
+      SELECT id, business_id as businessId, name, quantity, price, category_id as categoryId,
              cost_price as costPrice, low_stock_level as lowStockLevel, image_uri as imageUri
       FROM products
-      WHERE category_id = ?
+      WHERE business_id = ? AND category_id = ?
       ORDER BY name ASC
     `;
 
-    const results = await executeQuery<Product>(sql, [categoryId]);
+    const results = await executeQuery<Product>(sql, [businessId, categoryId]);
     return results;
   },
 };

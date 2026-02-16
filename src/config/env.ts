@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 /**
  * Environment Configuration
  *
@@ -5,10 +7,23 @@
  * Supports different environments (development, staging, production).
  */
 
+const getDevApiUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+
+  // Get the machine's IP address from Expo's constants
+  // This allows connecting to the dev server when running on a physical device via Expo Go
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  const localhost = debuggerHost?.split(':').shift() || 'localhost';
+
+  return `http://${localhost}:8089/api/v1`;
+};
+
 const ENV = {
   development: {
-    API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8089/api/v1',
-    USE_MOCK_DATA: true,
+    API_BASE_URL: getDevApiUrl(),
+    USE_MOCK_DATA: false,
     MOCK_DELAY_MS: 500,
     ENABLE_LOGGING: true,
   },

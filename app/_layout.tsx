@@ -22,15 +22,16 @@ function RootLayoutNav() {
     async function prepare() {
       try {
         // Import database and stores
-        const { initializeDatabase } = await import('@/src/services/database');
+        const { initializeDatabase, initializeIndexes, getDatabase } = await import('@/src/services/database');
+        const { SCHEMA_VERSION } = await import('@/src/services/database/schema');
         const { runMigrationIfNeeded } = await import('@/src/services/database/migrations');
         const { runSchemaV2Migration } = await import('@/src/services/database/schema-v2-migration');
         const { runSchemaV4Migration } = await import('@/src/services/database/schema-v4-migration');
         const { runSchemaV5Migration } = await import('@/src/services/database/schema-v5-migration');
         const { useProductStore, useCustomerStore, useSalesStore, useCategoryStore, usePaymentStore, useExpenseStore, useAppStore, useBusinessStore } = await import('@/src/store');
 
-        // 1. Initialize SQLite database
-        console.log('[App] Initializing database...');
+        // 1. Initialize SQLite database tables
+        console.log('[App] Initializing database tables...');
         await initializeDatabase();
 
         // 2. Run AsyncStorage → SQLite migration if needed 
@@ -49,7 +50,19 @@ function RootLayoutNav() {
         console.log('[App] Running partial payment migration if needed...');
         await runSchemaV5Migration();
 
-        // 6. Hydrate all stores from SQLite sequentially to avoid contention
+        // 6. Initialize database indexes (after migrations ensure columns exist)
+        console.log('[App] Initializing database indexes...');
+        await initializeIndexes();
+
+        // 7. Ensure schema version is set to current
+        const db = getDatabase();
+        const now = new Date().toISOString();
+        await db.runAsync(
+          `INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)`,
+          ['schema_version', SCHEMA_VERSION.toString(), now]
+        );
+
+        // 8. Hydrate all stores from SQLite sequentially to avoid contention
         console.log('[App] Hydrating stores...');
         await useAppStore.getState().hydrate();
         await useBusinessStore.getState().hydrate();

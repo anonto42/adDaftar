@@ -186,8 +186,7 @@ CREATE INDEX IF NOT EXISTS idx_expense_category ON expenses(category);
 /**
  * All schema creation statements in order
  */
-export const SCHEMA_STATEMENTS = [
-  // Tables
+export const TABLE_STATEMENTS = [
   createBusinessTable,
   createProductsTable,
   createCustomersTable,
@@ -197,8 +196,9 @@ export const SCHEMA_STATEMENTS = [
   createCategoriesTable,
   createPaymentHistoryTable,
   createExpensesTable,
+];
 
-  // Indexes
+export const INDEX_STATEMENTS = [
   createBusinessIndexes,
   createProductsIndexes,
   createCustomersIndexes,
@@ -208,6 +208,8 @@ export const SCHEMA_STATEMENTS = [
   createPaymentHistoryIndexes,
   createExpensesIndexes,
 ];
+
+export const SCHEMA_STATEMENTS = [...TABLE_STATEMENTS, ...INDEX_STATEMENTS];
 
 /**
  * Drop all tables (for testing/development only)

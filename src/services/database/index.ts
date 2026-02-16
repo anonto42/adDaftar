@@ -5,7 +5,7 @@
  */
 
 import * as SQLite from 'expo-sqlite';
-import { SCHEMA_STATEMENTS, DROP_ALL_TABLES, SCHEMA_VERSION } from './schema';
+import { TABLE_STATEMENTS, INDEX_STATEMENTS, DROP_ALL_TABLES } from './schema';
 
 const DATABASE_NAME = 'shop_management.db';
 
@@ -34,28 +34,21 @@ export async function initializeDatabase(): Promise<void> {
 
     // Add to write queue to ensure sequential execution
     const operation = writeQueue.then(async () => {
-      console.log('[DB] Initializing database...');
+      console.log('[DB] Initializing database tables...');
       try {
         // Optimization: Enable WAL mode and set busy timeout
         await database.execAsync('PRAGMA journal_mode = WAL;');
         await database.execAsync('PRAGMA busy_timeout = 5000;');
         await database.execAsync('PRAGMA foreign_keys = ON;');
 
-        // Create all tables and indexes
-        for (const statement of SCHEMA_STATEMENTS) {
+        // Create all tables (no indexes yet)
+        for (const statement of TABLE_STATEMENTS) {
           await database.execAsync(statement);
         }
 
-        // Set the schema version to the current version so migrations are skipped on fresh install
-        const now = new Date().toISOString();
-        await database.runAsync(
-          `INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)`,
-          ['schema_version', SCHEMA_VERSION.toString(), now]
-        );
-
-        console.log('[DB] Database initialized successfully');
+        console.log('[DB] Database tables initialized successfully');
       } catch (error) {
-        console.error('[DB] Failed to initialize database:', error);
+        console.error('[DB] Failed to initialize database tables:', error);
         initializationPromise = null; // Allow retry on failure
         throw error;
       }
@@ -66,6 +59,31 @@ export async function initializeDatabase(): Promise<void> {
   })();
 
   return initializationPromise;
+}
+
+/**
+ * Initialize database indexes
+ * Should be called after migrations to ensure all columns exist
+ */
+export async function initializeIndexes(): Promise<void> {
+  const database = getDatabase();
+
+  const operation = writeQueue.then(async () => {
+    console.log('[DB] Initializing database indexes...');
+    try {
+      // Create all indexes
+      for (const statement of INDEX_STATEMENTS) {
+        await database.execAsync(statement);
+      }
+      console.log('[DB] Database indexes initialized successfully');
+    } catch (error) {
+      console.error('[DB] Failed to initialize database indexes:', error);
+      // We don't throw here to allow the app to continue even if an index fails
+    }
+  });
+
+  writeQueue = operation.catch(() => {});
+  return operation;
 }
 
 /**

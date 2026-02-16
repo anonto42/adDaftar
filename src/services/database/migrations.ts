@@ -89,15 +89,17 @@ async function migrateProducts(database: any): Promise<void> {
     console.log(`[Migration] Migrating ${products.length} products...`);
 
     const now = new Date().toISOString();
+    const defaultBusinessId = 'default-business';
 
     for (const product of products) {
       const sql = `
-        INSERT INTO products (id, name, quantity, price, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO products (id, business_id, name, quantity, price, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
       await database.runAsync(sql, [
         product.id,
+        defaultBusinessId,
         product.name,
         product.quantity,
         product.price,
@@ -136,15 +138,17 @@ async function migrateCustomers(database: any): Promise<void> {
     console.log(`[Migration] Migrating ${customers.length} customers...`);
 
     const now = new Date().toISOString();
+    const defaultBusinessId = 'default-business';
 
     for (const customer of customers) {
       const sql = `
-        INSERT INTO customers (id, name, phone, address, total_due, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO customers (id, business_id, name, phone, address, total_due, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       await database.runAsync(sql, [
         customer.id,
+        defaultBusinessId,
         customer.name,
         customer.phone || null,
         customer.address || null,
@@ -184,16 +188,18 @@ async function migrateSales(database: any): Promise<void> {
     console.log(`[Migration] Migrating ${sales.length} sales...`);
 
     const now = new Date().toISOString();
+    const defaultBusinessId = 'default-business';
 
     for (const sale of sales) {
       // Insert sale record
       const insertSaleSql = `
-        INSERT INTO sales (id, date, total_amount, type, customer_id, customer_name, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sales (id, business_id, date, total_amount, type, customer_id, customer_name, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       await database.runAsync(insertSaleSql, [
         sale.id,
+        defaultBusinessId,
         sale.date,
         sale.totalAmount,
         sale.type,

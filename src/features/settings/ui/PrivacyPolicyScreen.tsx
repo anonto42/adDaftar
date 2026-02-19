@@ -53,7 +53,7 @@ export default function PrivacyPolicyScreen() {
 
         <PolicySection 
           title="3. Data Usage" 
-          content="Your data is used solely for the purpose of generating analytics, managing inventory, and providing you with business insights within the Hisab Rakho application." 
+          content="Your data is used solely for the purpose of generating analytics, managing inventory, and providing you with business insights within the Ad-Daftar application." 
         />
 
         <PolicySection 
@@ -73,7 +73,7 @@ export default function PrivacyPolicyScreen() {
 
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: theme.colors.textTertiary }]}>
-            © 2026 Hisab Rakho. All Rights Reserved.
+            © 2026 Ad-Daftar. All Rights Reserved.
           </Text>
         </View>
       </ScrollView>

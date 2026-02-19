@@ -216,7 +216,7 @@ export default function ReportsScreen() {
             ${customersHtml}
 
             <div class="footer">
-              <p>This report was generated automatically by <span class="software-credit">Hisab Rakho</span></p>
+              <p>This report was generated automatically by <span class="software-credit">Ad-Daftar</span></p>
               <p>Professional Shop Management Software | ${new Date().toLocaleString()}</p>
             </div>
           </body>

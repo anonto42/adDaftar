@@ -1,2 +1,10 @@
-// Features module is currently empty as social features were removed.
-export {};
+export * from './analytics';
+export * from './business';
+export * from './customers';
+export * from './dashboard';
+export * from './expenses';
+export * from './inventory';
+export * from './onboarding';
+export * from './sales';
+export * from './settings';
+export * from './ai';

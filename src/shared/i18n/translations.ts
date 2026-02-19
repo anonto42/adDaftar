@@ -1,7 +1,7 @@
 export const translations = {
   en: {
     // Onboarding
-    welcome: 'Welcome to Hisab Rakho',
+    welcome: 'Welcome to Ad-Daftar',
     onboarding_subtitle: 'Manage your shop business efficiently and professionally.',
     select_language: 'Select Language',
     continue: 'Continue',

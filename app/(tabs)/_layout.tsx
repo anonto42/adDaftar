@@ -55,6 +55,21 @@ export default function TabLayout() {
         }}
       />
 
+      {/* AI Assistant Tab */}
+      <Tabs.Screen
+        name="ai"
+        options={{
+          title: 'AI',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'sparkles' : 'sparkles-outline'}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+
       {/* Sales Tab */}
       <Tabs.Screen
         name="sales"

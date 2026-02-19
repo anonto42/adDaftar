@@ -5,9 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/src/shared/theme';
-import { useCustomerStore, useSalesStore, usePaymentStore, useAppStore, useBusinessStore } from '@/src/store';
+import { useCustomerStore, useSalesStore, usePaymentStore, useAppStore, useBusinessStore, useProductStore, useCategoryStore } from '@/src/store';
 import { formatCurrency } from '@/src/shared/utils/format';
-import { SearchBar, ScreenHeader, EmptyState, GlassCard } from '@/src/shared/components';
+import { SearchBar, ScreenHeader, EmptyState, GlassCard, Divider } from '@/src/shared/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CustomerDetailsScreen() {
@@ -17,6 +17,8 @@ export default function CustomerDetailsScreen() {
   const { customers, updateCustomer, updateDue } = useCustomerStore();
   const { sales } = useSalesStore();
   const { payments, addPayment } = usePaymentStore();
+  const { products } = useProductStore();
+  const { categories } = useCategoryStore();
   const { currency } = useAppStore();
   const { activeBusiness } = useBusinessStore();
 
@@ -269,11 +271,38 @@ export default function CustomerDetailsScreen() {
                 </View>
 
                 <View style={styles.transBody}>
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: 4 }}>
                     {isSale 
                       ? `${item.items.length} items • Received ${formatCurrency(item.receivedAmount || 0, currency)}` 
                       : `via ${item.paymentMethod}`}
                   </Text>
+                  
+                  {isSale && item.items && item.items.length > 0 && (
+                    <View style={styles.itemsList}>
+                      {item.items.map((saleItem: any, index: number) => {
+                        const product = products.find(p => p.id === saleItem.productId);
+                        const category = product ? categories.find(c => c.id === product.categoryId) : null;
+                        
+                        return (
+                          <View key={`${item.id}-item-${index}`} style={styles.itemRow}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.itemName, { color: theme.colors.text }]} numberOfLines={1}>
+                                {saleItem.productName}
+                              </Text>
+                              {category && (
+                                <Text style={[styles.itemCategory, { color: theme.colors.primary }]}>
+                                  {category.name}
+                                </Text>
+                              )}
+                            </View>
+                            <Text style={[styles.itemQty, { color: theme.colors.textSecondary }]}>
+                              {saleItem.quantity} x {formatCurrency(saleItem.unitPrice, currency)}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                   
                   {isSale && item.type === 'DUE' && (
                     <View style={styles.dueAddedBadge}>
@@ -449,6 +478,22 @@ const styles = StyleSheet.create({
   transTitle: { fontSize: 15, fontWeight: '700' },
   transAmount: { fontSize: 16, fontWeight: 'bold', fontVariant: ['tabular-nums'] },
   transBody: { gap: 6 },
+  itemsList: { 
+    marginTop: 8, 
+    marginBottom: 4, 
+    paddingTop: 8, 
+    borderTopWidth: 1, 
+    borderTopColor: 'rgba(0,0,0,0.05)' 
+  },
+  itemRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  itemName: { fontSize: 13, fontWeight: '600' },
+  itemCategory: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.7 },
+  itemQty: { fontSize: 11, fontVariant: ['tabular-nums'] },
   dueAddedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   transNotes: { fontSize: 12, fontStyle: 'italic', marginTop: 4 },
 

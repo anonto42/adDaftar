@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/shared/theme';
 import { useSalesStore } from '../model/sales.store';
+import { useProductStore, useCategoryStore } from '@/src/features/inventory';
 import { useAppStore } from '@/src/features/settings';
 import { useBusinessStore } from '@/src/features/business';
 import { formatCurrency } from '@/src/shared/utils/format';
@@ -15,6 +16,8 @@ export default function SalesHistoryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { sales, hydrate } = useSalesStore();
+  const { products } = useProductStore();
+  const { categories } = useCategoryStore();
   const { currency } = useAppStore();
   const { activeBusiness } = useBusinessStore();
 
@@ -93,6 +96,31 @@ export default function SalesHistoryScreen() {
                 </Text>
               </View>
             )}
+
+            <View style={styles.itemsList}>
+              {item.items.map((saleItem: any, index: number) => {
+                const product = products.find(p => p.id === saleItem.productId);
+                const category = product ? categories.find(c => c.id === product.categoryId) : null;
+                
+                return (
+                  <View key={`${item.id}-item-${index}`} style={styles.itemRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.itemName, { color: theme.colors.text }]} numberOfLines={1}>
+                        {saleItem.productName}
+                      </Text>
+                      {category && (
+                        <Text style={[styles.itemCategory, { color: theme.colors.primary }]}>
+                          {category.name}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={[styles.itemQty, { color: theme.colors.textSecondary }]}>
+                      {saleItem.quantity} x {formatCurrency(saleItem.unitPrice, currency)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
             
             <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
             
@@ -166,6 +194,18 @@ const styles = StyleSheet.create({
     height: 1,
     marginVertical: 12,
   },
+  itemsList: { 
+    marginTop: 12, 
+  },
+  itemRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  itemName: { fontSize: 13, fontWeight: '600' },
+  itemCategory: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.7 },
+  itemQty: { fontSize: 11, fontVariant: ['tabular-nums'] },
   middleNoteContainer: {
     flexDirection: 'row',
     alignItems: 'center',

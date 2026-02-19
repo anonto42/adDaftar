@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/shared/theme';
 import { useAppStore } from '@/src/features/settings';
 import { useBusinessStore } from '@/src/features/business';
+import { useSalesStore } from '@/src/features/sales';
+import { usePaymentStore, useCustomerStore } from '@/src/features/customers';
+import { expenseRepository, useExpenseStore } from '@/src/features/expenses';
 import { analyticsRepository } from '../api/analytics.repository';
-import { expenseRepository } from '@/src/features/expenses';
 import { SalesTrend, TopProduct, TopCustomer, FinancialSummary } from '@/src/shared/types/shop.types';
 import { PressableScale, ScreenHeader } from '@/src/shared/components';
 import { formatCurrency } from '@/src/shared/utils/format';
@@ -21,6 +24,10 @@ export default function AnalyticsScreen() {
   const router = useRouter();
   const { currency } = useAppStore();
   const { activeBusinessId, activeBusiness } = useBusinessStore();
+  const { sales } = useSalesStore();
+  const { payments } = usePaymentStore();
+  const { expenses } = useExpenseStore();
+  const { customers } = useCustomerStore();
 
   const [salesTrends, setSalesTrends] = useState<SalesTrend[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -44,8 +51,13 @@ export default function AnalyticsScreen() {
       }
 
       // Load all analytics data
+      const isWeekly = selectedPeriod === 'month';
       const [trends, products, customers, summary, expenses] = await Promise.all([
-        analyticsRepository.getSalesTrends(activeBusinessId, selectedPeriod === 'week' ? 7 : 30),
+        analyticsRepository.getSalesTrends(
+          activeBusinessId, 
+          isWeekly ? 28 : 7, // Use 28 days for clean 4-week chunks
+          isWeekly ? 'week' : 'day'
+        ),
         analyticsRepository.getTopProducts(activeBusinessId, 5),
         analyticsRepository.getTopCustomers(activeBusinessId, 5),
         analyticsRepository.getFinancialSummary(
@@ -70,11 +82,17 @@ export default function AnalyticsScreen() {
     } catch (error) {
       console.error('[Analytics] Failed to load data:', error);
     }
-  }, [selectedPeriod, activeBusinessId]);
+  }, [selectedPeriod, activeBusinessId, sales, payments, expenses, customers]);
 
   useEffect(() => {
     loadAnalytics();
   }, [loadAnalytics]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAnalytics();
+    }, [loadAnalytics])
+  );
 
   const chartConfig = {
     backgroundColor: theme.colors.card,
@@ -215,8 +233,9 @@ export default function AnalyticsScreen() {
           <LineChart
             data={{
               labels: salesTrends.map((t) => {
-                const date = new Date(t.date);
-                return `${date.getMonth() + 1}/${date.getDate()}`;
+                // Safe parsing of YYYY-MM-DD to avoid timezone shifts
+                const [year, month, day] = t.date.split('-').map(Number);
+                return `${month}/${day}`;
               }),
               datasets: [
                 {

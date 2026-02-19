@@ -15,26 +15,98 @@ import { executeQuery, executeQuerySingle } from '@/src/services/database';
 export const analyticsRepository = {
   /**
    * Get sales trends for last N days for a business
+   * Ensures every day in the range has a data point (zero-filled if no sales)
+   * Can optionally group results by week
    */
-  getSalesTrends: async (businessId: string, days: number = 7): Promise<SalesTrend[]> => {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+  getSalesTrends: async (
+    businessId: string, 
+    days: number = 7, 
+    groupBy: 'day' | 'week' = 'day'
+  ): Promise<SalesTrend[]> => {
+    // Use local time boundaries for more intuitive "Today" reporting
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const endDateISO = end.toISOString();
+    
+    const start = new Date();
+    start.setDate(start.getDate() - (days - 1));
+    start.setHours(0, 0, 0, 0);
+    const startDateISO = start.toISOString();
 
+    // Group by the date part of the ISO string (YYYY-MM-DD)
     const sql = `
       SELECT
-        DATE(date) as date,
+        substr(date, 1, 10) as trend_date,
         SUM(total_amount) as sales,
         SUM(profit) as profit,
         COUNT(*) as count
       FROM sales
-      WHERE business_id = ? AND date >= ?
-      GROUP BY DATE(date)
-      ORDER BY date ASC
+      WHERE business_id = ? AND date >= ? AND date <= ?
+      GROUP BY trend_date
+      ORDER BY trend_date ASC
     `;
 
-    const results = await executeQuery<SalesTrend>(sql, [businessId, startDate.toISOString()]);
-    return results;
+    const dbResults = await executeQuery<any>(sql, [
+      businessId, 
+      startDateISO,
+      endDateISO
+    ]);
+
+    const resultsMap = new Map<string, SalesTrend>();
+    dbResults.forEach(row => {
+      resultsMap.set(row.trend_date, {
+        date: row.trend_date,
+        sales: Number(row.sales || 0),
+        profit: Number(row.profit || 0),
+        count: Number(row.count || 0)
+      });
+    });
+
+    const dailyTrends: SalesTrend[] = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
+
+      if (resultsMap.has(dateKey)) {
+        dailyTrends.push(resultsMap.get(dateKey)!);
+      } else {
+        dailyTrends.push({
+          date: dateKey,
+          sales: 0,
+          profit: 0,
+          count: 0
+        });
+      }
+    }
+
+    if (groupBy === 'day') {
+      return dailyTrends;
+    }
+
+    // Group by week (7-day chunks)
+    const weeklyTrends: SalesTrend[] = [];
+    for (let i = 0; i < dailyTrends.length; i += 7) {
+      const weekChunk = dailyTrends.slice(i, Math.min(i + 7, dailyTrends.length));
+      if (weekChunk.length === 0) continue;
+
+      const weekSales = weekChunk.reduce((sum, d) => sum + d.sales, 0);
+      const weekProfit = weekChunk.reduce((sum, d) => sum + d.profit, 0);
+      const weekCount = weekChunk.reduce((sum, d) => sum + d.count, 0);
+      
+      weeklyTrends.push({
+        date: weekChunk[weekChunk.length - 1].date,
+        sales: weekSales,
+        profit: weekProfit,
+        count: weekCount
+      });
+    }
+
+    return weeklyTrends;
   },
 
   /**

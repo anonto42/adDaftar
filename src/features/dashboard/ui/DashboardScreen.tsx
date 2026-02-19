@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Text, ScrollView, Dimensions } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/shared/theme';
-import { useCustomerStore } from '@/src/features/customers';
+import { useCustomerStore, usePaymentStore } from '@/src/features/customers';
 import { useProductStore } from '@/src/features/inventory';
+import { useSalesStore } from '@/src/features/sales';
+import { useExpenseStore } from '@/src/features/expenses';
 import { useAppStore } from '@/src/features/settings';
 import { useI18n } from '@/src/shared/i18n';
 import { useBusinessStore } from '@/src/features/business';
@@ -19,8 +22,11 @@ const screenWidth = Dimensions.get('window').width;
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { getTotalDues } = useCustomerStore();
+  const { getTotalDues, customers } = useCustomerStore();
   const { products } = useProductStore();
+  const { sales } = useSalesStore();
+  const { payments } = usePaymentStore();
+  const { expenses } = useExpenseStore();
   const { currency } = useAppStore();
   const { activeBusinessId, activeBusiness } = useBusinessStore();
   const { t } = useI18n();
@@ -59,11 +65,17 @@ export default function DashboardScreen() {
     } catch (error) {
       console.error('[Dashboard] Failed to load data:', error);
     }
-  }, [activeBusinessId, getTotalDues]);
+  }, [activeBusinessId, getTotalDues, sales, payments, expenses, customers, products]);
 
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [loadDashboardData])
+  );
 
   const totalProducts = products.reduce((sum, p) => sum + p.quantity, 0);
 
@@ -127,8 +139,9 @@ export default function DashboardScreen() {
           <LineChart
             data={{
               labels: salesTrends.map(t => {
-                const date = new Date(t.date);
-                return `${date.getMonth() + 1}/${date.getDate()}`;
+                // Safe parsing of YYYY-MM-DD to avoid timezone shifts
+                const [year, month, day] = t.date.split('-').map(Number);
+                return `${month}/${day}`;
               }),
               datasets: [{
                 data: salesTrends.map(t => t.sales || 0)

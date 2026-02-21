@@ -4,7 +4,7 @@
  * Contains all SQL DDL statements for creating tables and indexes
  */
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const createBusinessTable = `
 CREATE TABLE IF NOT EXISTS business (
@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS sales (
   profit REAL DEFAULT 0,
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (business_id) REFERENCES business(id) ON DELETE CASCADE,
   FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 );
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
   total REAL NOT NULL,
   cost_price REAL DEFAULT 0,
   profit REAL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
 );
@@ -151,6 +153,7 @@ CREATE TABLE IF NOT EXISTS payment_history (
   payment_method TEXT DEFAULT 'CASH',
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (business_id) REFERENCES business(id) ON DELETE CASCADE,
   FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );

@@ -29,8 +29,8 @@ export const salesRepository = {
       const database = getDatabase();
       // 1. Insert sale record
       const insertSaleSql = `
-        INSERT INTO sales (id, business_id, date, total_amount, received_amount, type, customer_id, customer_name, discount, payment_method, profit, notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sales (id, business_id, date, total_amount, received_amount, type, customer_id, customer_name, discount, payment_method, profit, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       await database.runAsync(insertSaleSql, [
@@ -47,6 +47,7 @@ export const salesRepository = {
         0, // Will update after calculating from items
         saleData.notes || null,
         now,
+        now,
       ]);
 
       // 2. Insert sale items and calculate profit
@@ -62,8 +63,8 @@ export const salesRepository = {
         totalProfit += itemProfit;
 
         const insertItemSql = `
-          INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total, cost_price, profit)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total, cost_price, profit, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         await database.runAsync(insertItemSql, [
@@ -75,6 +76,7 @@ export const salesRepository = {
           item.total,
           costPrice,
           itemProfit,
+          now,
         ]);
 
         // 3. Update product quantity

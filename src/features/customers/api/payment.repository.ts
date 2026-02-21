@@ -12,8 +12,8 @@ export const paymentRepository = {
     const now = new Date().toISOString();
 
     const sql = `
-      INSERT INTO payment_history (id, business_id, customer_id, amount, payment_date, payment_method, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO payment_history (id, business_id, customer_id, amount, payment_date, payment_method, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await executeStatement(sql, [
@@ -24,6 +24,7 @@ export const paymentRepository = {
       paymentData.paymentDate,
       paymentData.paymentMethod,
       paymentData.notes || null,
+      now,
       now,
     ]);
 

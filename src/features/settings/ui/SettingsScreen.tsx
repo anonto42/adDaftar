@@ -9,6 +9,7 @@ import { useI18n } from '@/src/shared/i18n';
 import { dropAllTables, initializeDatabase, resetDatabaseState } from '@/src/services/database';
 import { APP_CONSTANTS } from '@/src/config';
 import { ScreenHeader } from '@/src/shared/components';
+import { syncRepository } from '@/src/services/api/sync.repository';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
@@ -17,10 +18,31 @@ export default function SettingsScreen() {
   const { currency, setCurrency, setTheme: setStoreTheme, language, setLanguage } = useAppStore();
   const { activeBusiness } = useBusinessStore();
   const { t } = useI18n();
+  const [isSyncing, setIsSyncing] = React.useState(false);
 
   const handleSetTheme = async (mode: 'light' | 'dark' | 'system') => {
     setThemeMode(mode);
     await setStoreTheme(mode);
+  };
+
+  const handleSync = async () => {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    try {
+      const result = await syncRepository.sync();
+      if (result.success) {
+        Alert.alert('Success', 'Data synchronized successfully with the backend.');
+        // Optionally refresh stores here
+      } else {
+        Alert.alert('Error', 'Failed to synchronize data. Please check your connection and backend.');
+      }
+    } catch (error) {
+      console.error('[Settings] Sync failed:', error);
+      Alert.alert('Error', 'An unexpected error occurred during sync.');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleResetApp = () => {
@@ -178,9 +200,10 @@ export default function SettingsScreen() {
 
         <SettingSection title="Data Management">
           <SettingItem 
-            icon="cloud-upload-outline" 
-            title="Backup Data" 
-            onPress={() => Alert.alert('Coming Soon', 'Cloud backup will be available in a future update.')}
+            icon={isSyncing ? "sync" : "cloud-upload-outline"} 
+            title={isSyncing ? "Syncing..." : "Sync with Backend"} 
+            onPress={handleSync}
+            showChevron={!isSyncing}
           />
           <SettingItem 
             icon="refresh-outline" 

@@ -28,6 +28,7 @@ function RootLayoutNav() {
         const { runSchemaV2Migration } = await import('@/src/services/database/schema-v2-migration');
         const { runSchemaV4Migration } = await import('@/src/services/database/schema-v4-migration');
         const { runSchemaV5Migration } = await import('@/src/services/database/schema-v5-migration');
+        const { runSchemaV6Migration } = await import('@/src/services/database/schema-v6-migration');
         const { useProductStore, useCustomerStore, useSalesStore, useCategoryStore, usePaymentStore, useExpenseStore, useAppStore, useBusinessStore } = await import('@/src/store');
 
         // 1. Initialize SQLite database tables
@@ -50,7 +51,11 @@ function RootLayoutNav() {
         console.log('[App] Running partial payment migration if needed...');
         await runSchemaV5Migration();
 
-        // 6. Initialize database indexes (after migrations ensure columns exist)
+        // 6. Run sync timestamp migration
+        console.log('[App] Running sync timestamp migration if needed...');
+        await runSchemaV6Migration();
+
+        // 7. Initialize database indexes (after migrations ensure columns exist)
         console.log('[App] Initializing database indexes...');
         await initializeIndexes();
 

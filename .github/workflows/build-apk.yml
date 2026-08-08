@@ -36,45 +36,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build APK
+      - name: Build APK (EAS Build + Wait)
         id: build
         run: |
-          # Trigger the build and capture the build ID
-          BUILD_OUTPUT=$(eas build --platform android --profile preview --non-interactive 2>&1)
-          echo "$BUILD_OUTPUT"
-          # Export build ID for later steps
-          BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -oP 'Build ID: \K[a-f0-9-]+' | head -1)
-          echo "build-id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          URL=$(eas build --platform android --profile preview --non-interactive --wait 2>&1 | grep -oP 'https://expo\.\S+\.apk')
+          if [ -z "$URL" ]; then
+            # Fallback: try to extract from build artifacts line
+            URL=$(eas build --platform android --profile preview --non-interactive --wait 2>&1 | grep -oP 'Build artifacts: \Khttps://\S+')
+          fi
+          echo "Download URL: $URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for build and download APK
+      - name: Download APK
         id: download
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          # The build ID from the previous step
-          BUILD_ID="${{ steps.build.outputs.build-id }}"
-
-          if [ -z "$BUILD_ID" ]; then
-            echo "No build ID found. Trying alternative extraction..."
-            # Alternative: wait for the last build
-          fi
-
-          # Wait for the build to complete and download
-          npx eas build:download --platform android --build-id "$BUILD_ID" --output-dir ./apk 2>/dev/null || \
-          npx eas build:download --platform android --output-dir ./apk
-
-          if [ -z "$BUILD_ID" ]; then
-            # If no specific build ID, wait for the most recent build
-            npx eas build:download --platform android --output-dir ./apk
-          fi
-
-          # List downloaded files
-          ls -la ./apk/ || echo "No files downloaded"
+          URL="${{ steps.build.outputs.url }}"
+          echo "Downloading from: $URL"
+          curl -L "$URL" -o app.apk
+          ls -la app.apk
 
       - name: Find APK file
         id: find-apk
         run: |
-          APK_FILE=$(find ./apk -name "*.apk" -type f 2>/dev/null | head -1)
+          APK_FILE=$(find . -maxdepth 1 -name "*.apk" -type f | head -1)
           if [ -z "$APK_FILE" ]; then
             echo "::error::No APK file found after download"
             exit 1

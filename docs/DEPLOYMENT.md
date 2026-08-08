@@ -123,6 +123,35 @@ If you plan to add backend sync or external services in the future:
    const apiUrl = Constants.expoConfig?.extra?.apiUrl;
    ```
 
+## GitHub Actions CI/CD
+
+This repository includes automated build workflows:
+
+- **CI** (`ci.yml`): Runs lint on every push/PR to `main`
+- **Build APK** (`build-apk.yml`): Builds and releases APK on tag pushes (`v*`) or GitHub Release publication
+
+### Required GitHub Secrets
+
+To enable EAS builds in CI, set the following secret in your GitHub repository settings:
+
+1. Go to **Settings → Secrets and variables → Actions**
+2. Add the following secret:
+
+   | Secret | Description |
+   |--------|-------------|
+   | `EXPO_TOKEN` | Expo access token for EAS Build authentication. Generate one at https://expo.dev/accounts/<username>/access-tokens |
+
+### Generating an EXPO_TOKEN
+
+```bash
+eas login
+eas credentials:create
+# Then generate a token:
+expo access:token:create --full-access ci-build-token
+```
+
+Copy the generated token and add it as `EXPO_TOKEN` in GitHub repository secrets.
+
 ## Troubleshooting
 
 | Issue | Solution |

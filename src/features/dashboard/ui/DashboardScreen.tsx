@@ -65,11 +65,11 @@ export default function DashboardScreen() {
     } catch (error) {
       console.error('[Dashboard] Failed to load data:', error);
     }
-  }, [activeBusinessId, getTotalDues, sales, payments, expenses, customers, products]);
+  }, [activeBusinessId, getTotalDues]);
 
   useEffect(() => {
     loadDashboardData();
-  }, [loadDashboardData]);
+  }, [loadDashboardData, sales, payments, expenses, customers, products]);
 
   useFocusEffect(
     useCallback(() => {
@@ -140,7 +140,7 @@ export default function DashboardScreen() {
             data={{
               labels: salesTrends.map(t => {
                 // Safe parsing of YYYY-MM-DD to avoid timezone shifts
-                const [year, month, day] = t.date.split('-').map(Number);
+                const [, month, day] = t.date.split('-').map(Number);
                 return `${month}/${day}`;
               }),
               datasets: [{

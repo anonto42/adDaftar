@@ -1,2 +1,2 @@
 // Public API for Onboarding feature
-export {};
+export { default as OnboardingScreen } from './ui/OnboardingScreen';

@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+set -eu
+
+# Run full lint check before push
+echo "Running lint checks..."
+npx expo lint --max-warnings=0
+
+# Prevent pushing to main directly (require PR review)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" = "main" ]; then
+    echo "✗ Direct pushes to 'main' are not allowed. Create a pull request instead."
+    echo "  git checkout -b feat/your-feature-name"
+    exit 1
+fi
+
+# Verify we're pushing to origin (not a fork or other remote)
+REMOTE=$(git remote)
+if ! echo "$REMOTE" | grep -q "origin"; then
+    echo "Warning: No 'origin' remote configured. Skipping push."
+fi
+
+echo "✓ All pre-push checks passed"

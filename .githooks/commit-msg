@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+set -eu
+
+# Validate conventional commit format
+COMMIT_MSG=$(cat "$1")
+
+# Check if commit message follows conventional commits format
+# Format: type(scope): description  OR  type: description
+echo "$COMMIT_MSG" | grep -qE '^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\(.+\))?!?: .+' && exit 0
+
+echo ""
+echo "✗ Commit message does not follow Conventional Commits format!"
+echo ""
+echo "Expected format: <type>(<scope>): <description>"
+echo ""
+echo "Examples:"
+echo "  feat(sales): add partial payment support"
+echo "  fix(inventory): correct low stock threshold"
+echo "  docs(analytics): update report documentation"
+echo "  chore: update dependencies"
+echo ""
+echo "Types: feat, fix, chore, docs, style, refactor, perf, test, build, ci, revert"
+echo ""
+echo "If you want to bypass this check, use: git commit --no-verify"
+exit 1

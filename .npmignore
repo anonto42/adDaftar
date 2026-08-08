@@ -1,0 +1,72 @@
+# Source and build
+node_modules/
+src/
+app/
+assets/
+doc/
+docs/
+
+# Config files
+eas.json
+babel.config.js
+eslint.config.js
+tsconfig.json
+app.json
+pnpm-workspace.yaml
+
+# Environment and secrets
+.env*
+*.env
+.expo/
+.expo-go/
+
+# Native build directories
+ios/
+android/
+dist/
+web-build/
+
+# Git and GitHub
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Lock files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Types
+expo-env.d.ts
+*.tsbuildinfo
+
+# Testing
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Coverage
+coverage/
+
+# Keep these files (do NOT ignore)
+!README.md
+!CHANGELOG.md
+!LICENSE
+!package.json

@@ -1,0 +1,91 @@
+name: Build & Release APK
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build APK
+        id: build
+        run: |
+          # Trigger the build and capture the build ID
+          BUILD_OUTPUT=$(eas build --platform android --profile preview --non-interactive 2>&1)
+          echo "$BUILD_OUTPUT"
+          # Export build ID for later steps
+          BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -oP 'Build ID: \K[a-f0-9-]+' | head -1)
+          echo "build-id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for build and download APK
+        id: download
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          # The build ID from the previous step
+          BUILD_ID="${{ steps.build.outputs.build-id }}"
+
+          if [ -z "$BUILD_ID" ]; then
+            echo "No build ID found. Trying alternative extraction..."
+            # Alternative: wait for the last build
+          fi
+
+          # Wait for the build to complete and download
+          npx eas build:download --platform android --build-id "$BUILD_ID" --output-dir ./apk 2>/dev/null || \
+          npx eas build:download --platform android --output-dir ./apk
+
+          if [ -z "$BUILD_ID" ]; then
+            # If no specific build ID, wait for the most recent build
+            npx eas build:download --platform android --output-dir ./apk
+          fi
+
+          # List downloaded files
+          ls -la ./apk/ || echo "No files downloaded"
+
+      - name: Find APK file
+        id: find-apk
+        run: |
+          APK_FILE=$(find ./apk -name "*.apk" -type f 2>/dev/null | head -1)
+          if [ -z "$APK_FILE" ]; then
+            echo "::error::No APK file found after download"
+            exit 1
+          fi
+          echo "apk-path=$APK_FILE" >> "$GITHUB_OUTPUT"
+          echo "APK found: $APK_FILE"
+
+      - name: Upload APK to Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.find-apk.outputs.apk-path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

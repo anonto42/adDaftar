@@ -7,4 +7,3 @@ export * from './inventory';
 export * from './onboarding';
 export * from './sales';
 export * from './settings';
-export * from './ai';

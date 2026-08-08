@@ -82,11 +82,11 @@ export default function AnalyticsScreen() {
     } catch (error) {
       console.error('[Analytics] Failed to load data:', error);
     }
-  }, [selectedPeriod, activeBusinessId, sales, payments, expenses, customers]);
+  }, [selectedPeriod, activeBusinessId]);
 
   useEffect(() => {
     loadAnalytics();
-  }, [loadAnalytics]);
+  }, [loadAnalytics, sales, payments, expenses, customers]);
 
   useFocusEffect(
     useCallback(() => {
@@ -234,7 +234,7 @@ export default function AnalyticsScreen() {
             data={{
               labels: salesTrends.map((t) => {
                 // Safe parsing of YYYY-MM-DD to avoid timezone shifts
-                const [year, month, day] = t.date.split('-').map(Number);
+                const [, month, day] = t.date.split('-').map(Number);
                 return `${month}/${day}`;
               }),
               datasets: [

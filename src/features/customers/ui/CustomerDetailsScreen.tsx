@@ -7,7 +7,7 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '@/src/shared/theme';
 import { useCustomerStore, useSalesStore, usePaymentStore, useAppStore, useBusinessStore, useProductStore, useCategoryStore } from '@/src/store';
 import { formatCurrency } from '@/src/shared/utils/format';
-import { SearchBar, ScreenHeader, EmptyState, GlassCard, Divider } from '@/src/shared/components';
+import { SearchBar, ScreenHeader, EmptyState, GlassCard } from '@/src/shared/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CustomerDetailsScreen() {

@@ -13,10 +13,9 @@ export async function runSchemaV6Migration(): Promise<void> {
     // 1. Add updated_at to sales
     try {
       await db.execAsync('ALTER TABLE sales ADD COLUMN updated_at TEXT;');
-      const now = new Date().toISOString();
       await db.runAsync('UPDATE sales SET updated_at = created_at WHERE updated_at IS NULL;', []);
       console.log('[Migration] Added updated_at to sales');
-    } catch (e) {
+    } catch {
       // Column might already exist
     }
 
@@ -28,17 +27,16 @@ export async function runSchemaV6Migration(): Promise<void> {
       const now = new Date().toISOString();
       await db.runAsync('UPDATE sale_items SET updated_at = ?, uuid = id || "_" || sale_id WHERE updated_at IS NULL;', [now]);
       console.log('[Migration] Added updated_at and uuid to sale_items');
-    } catch (e) {
+    } catch {
       // Column might already exist
     }
 
     // 3. Add updated_at to payment_history
     try {
       await db.execAsync('ALTER TABLE payment_history ADD COLUMN updated_at TEXT;');
-      const now = new Date().toISOString();
       await db.runAsync('UPDATE payment_history SET updated_at = created_at WHERE updated_at IS NULL;', []);
       console.log('[Migration] Added updated_at to payment_history');
-    } catch (e) {
+    } catch {
       // Column might already exist
     }
 

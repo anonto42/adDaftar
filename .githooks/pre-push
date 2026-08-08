@@ -3,7 +3,7 @@ set -eu
 
 # Run full lint check before push
 echo "Running lint checks..."
-npx expo lint --max-warnings=0
+pnpm exec expo lint --max-warnings=0
 
 # Prevent pushing to main directly (require PR review)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)

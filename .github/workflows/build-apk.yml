@@ -7,6 +7,15 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: "Publish APK to a GitHub Release (uses version from package.json)"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
 
 jobs:
   build-apk:
@@ -17,59 +26,79 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Install pnpm
-        run: npm install -g pnpm@9
-
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
+      - name: Setup Java (JDK 17 for Android Gradle)
+        uses: actions/setup-java@v4
         with:
-          eas-version: latest
-          expo-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle Cache
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build APK (EAS Build + Wait)
-        id: build
+      - name: Read app version
+        id: version
         run: |
-          URL=$(eas build --platform android --profile preview --non-interactive --wait 2>&1 | grep -oP 'https://expo\.\S+\.apk')
-          if [ -z "$URL" ]; then
-            # Fallback: try to extract from build artifacts line
-            URL=$(eas build --platform android --profile preview --non-interactive --wait 2>&1 | grep -oP 'Build artifacts: \Khttps://\S+')
-          fi
-          echo "Download URL: $URL"
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "App version: $VERSION"
 
-      - name: Download APK
-        id: download
-        run: |
-          URL="${{ steps.build.outputs.url }}"
-          echo "Downloading from: $URL"
-          curl -L "$URL" -o app.apk
-          ls -la app.apk
+      - name: Prebuild Android native project
+        run: pnpm exec expo prebuild --platform android --clean --no-install
 
-      - name: Find APK file
+      - name: Build Standalone Release APK with Gradle
+        working-directory: android
+        run: ./gradlew assembleRelease -x lint -x test --no-daemon
+
+      - name: Prepare APK file
         id: find-apk
         run: |
-          APK_FILE=$(find . -maxdepth 1 -name "*.apk" -type f | head -1)
-          if [ -z "$APK_FILE" ]; then
-            echo "::error::No APK file found after download"
+          APK_SOURCE="android/app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_SOURCE" ]; then
+            APK_SOURCE=$(find android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          fi
+          if [ -z "$APK_SOURCE" ] || [ ! -f "$APK_SOURCE" ]; then
+            echo "::error::No APK file found after Gradle build"
             exit 1
           fi
-          echo "apk-path=$APK_FILE" >> "$GITHUB_OUTPUT"
-          echo "APK found: $APK_FILE"
+          APK_NAME="ad-daftar-v${{ steps.version.outputs.version }}.apk"
+          cp "$APK_SOURCE" "./$APK_NAME"
+          ls -lh "./$APK_NAME"
+          echo "apk-path=$APK_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK to Release
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.find-apk.outputs.apk-path }}
+          path: ${{ steps.find-apk.outputs.apk-path }}
+          if-no-files-found: error
+
+      - name: Publish APK to GitHub Release
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') ||
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          name: Release v${{ steps.version.outputs.version }}
+          generate_release_notes: true
           files: ${{ steps.find-apk.outputs.apk-path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

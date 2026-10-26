@@ -18,8 +18,8 @@ import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { useBusinessStore } from '@/src/features/business';
 
 const SIDEBAR_WIDTH = 85;
-const TAG_WIDTH = 12;
-const TAG_HEIGHT = 70;
+const TAG_WIDTH = 16;
+const TAG_HEIGHT = 76;
 
 export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const { theme } = useTheme();
@@ -58,6 +58,8 @@ export const SideTabBar = ({ state, descriptors, navigation }: BottomTabBarProps
 
   // --- Gesture Logic ---
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-15, 15])
     .onUpdate((e) => {
       // Only allow activation if sidebar is closed
       if (!isOpen && e.translationX < 0) return;
@@ -352,10 +354,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#000',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
   },
   mainScroll: {
     flex: 1,

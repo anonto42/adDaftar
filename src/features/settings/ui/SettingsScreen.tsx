@@ -1,12 +1,24 @@
 import React from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert, Share } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
 import { useTheme } from '@/src/shared/theme';
-import { useAppStore, useBusinessStore } from '@/src/store';
+import {
+  useAppStore,
+  useBusinessStore,
+  useProductStore,
+  useCategoryStore,
+  useCustomerStore,
+  useSalesStore,
+  usePaymentStore,
+  useExpenseStore,
+} from '@/src/store';
 import { useI18n } from '@/src/shared/i18n';
-import { dropAllTables, initializeDatabase, resetDatabaseState } from '@/src/services/database';
+import { dropAllTables, initializeDatabase, initializeIndexes, resetDatabaseState, getDatabase } from '@/src/services/database';
+import { SCHEMA_VERSION } from '@/src/services/database/schema';
 import { APP_CONSTANTS } from '@/src/config';
 import { ScreenHeader } from '@/src/shared/components';
 import { syncRepository } from '@/src/services/api/sync.repository';
@@ -19,10 +31,40 @@ export default function SettingsScreen() {
   const { activeBusiness } = useBusinessStore();
   const { t } = useI18n();
   const [isSyncing, setIsSyncing] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  const hydrateAllStores = async () => {
+    await useAppStore.getState().hydrate();
+    await useBusinessStore.getState().hydrate();
+    await useProductStore.getState().hydrate();
+    await useCategoryStore.getState().hydrate();
+    await useCustomerStore.getState().hydrate();
+    await useSalesStore.getState().hydrate();
+    await usePaymentStore.getState().hydrate();
+    await useExpenseStore.getState().hydrate();
+  };
 
   const handleSetTheme = async (mode: 'light' | 'dark' | 'system') => {
     setThemeMode(mode);
     await setStoreTheme(mode);
+  };
+
+  const handleExportBackup = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const backupPayload = await syncRepository.exportAllData();
+      const jsonString = JSON.stringify(backupPayload, null, 2);
+      await Share.share({
+        title: `${APP_CONSTANTS.APP_NAME} Backup (${new Date().toISOString().slice(0, 10)})`,
+        message: jsonString,
+      });
+    } catch (error) {
+      console.error('[Settings] Backup export failed:', error);
+      Alert.alert('Error', 'Failed to export backup data.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSync = async () => {
@@ -32,8 +74,8 @@ export default function SettingsScreen() {
     try {
       const result = await syncRepository.sync();
       if (result.success) {
+        await hydrateAllStores();
         Alert.alert('Success', 'Data synchronized successfully with the backend.');
-        // Optionally refresh stores here
       } else {
         Alert.alert('Error', 'Failed to synchronize data. Please check your connection and backend.');
       }
@@ -56,16 +98,26 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Drop all tables
+              // 1. Drop all tables & clear persisted active business
               await dropAllTables();
+              await AsyncStorage.removeItem('active_business_id');
 
-              // Reset database state to clear initialization promise
+              // 2. Reset database state & reinitialize schema + indexes
               resetDatabaseState();
-
-              // Reinitialize database
               await initializeDatabase();
+              await initializeIndexes();
 
-              Alert.alert('Success', 'App has been reset. Please restart the app.');
+              const db = getDatabase();
+              await db.runAsync(
+                `INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)`,
+                ['schema_version', SCHEMA_VERSION.toString(), new Date().toISOString()]
+              );
+
+              // 3. Re-hydrate all stores in-memory so state is clean immediately
+              await hydrateAllStores();
+
+              // 4. Redirect to onboarding flow
+              router.replace('/onboarding');
             } catch (error) {
               console.error('[Settings] Failed to reset app:', error);
               const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -200,6 +252,12 @@ export default function SettingsScreen() {
 
         <SettingSection title="Data Management">
           <SettingItem 
+            icon="download-outline" 
+            title={isExporting ? "Preparing Backup..." : "Export Local Backup (JSON)"} 
+            onPress={handleExportBackup}
+            showChevron={!isExporting}
+          />
+          <SettingItem 
             icon={isSyncing ? "sync" : "cloud-upload-outline"} 
             title={isSyncing ? "Syncing..." : "Sync with Backend"} 
             onPress={handleSync}
@@ -230,7 +288,11 @@ export default function SettingsScreen() {
             icon="star-outline" 
             title="Rate the App" 
             isLast={true}
-            onPress={() => {}}
+            onPress={() => {
+              Linking.openURL('https://github.com/anonto42/adDaftar').catch(() => {
+                Alert.alert('Thank You!', 'Thank you for using Ad-Daftar!');
+              });
+            }}
           />
         </SettingSection>
 

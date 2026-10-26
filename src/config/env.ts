@@ -57,24 +57,17 @@ export const config = ENV[APP_ENV];
 
 // Feature flags for future features
 export const featureFlags = {
-  enableStories: true,
-  enableReels: false,
-  enableDirectMessages: false,
-  enableLiveStreaming: false,
+  enableCloudSync: true,
+  enableBackupExport: true,
   enablePushNotifications: false,
-  enableOfflineMode: false,
-  enableAnalytics: false,
+  enableOfflineMode: true,
+  enableAnalytics: true,
 } as const;
 
 // App constants
 export const APP_CONSTANTS = {
-  APP_NAME: 'SocialMedia',
-  APP_VERSION: '1.0.2',
+  APP_NAME: Constants.expoConfig?.name || 'Ad-Daftar',
+  APP_VERSION: Constants.expoConfig?.version || '1.0.3',
   PAGINATION_LIMIT: 20,
   MAX_IMAGE_SIZE_MB: 10,
-  MAX_VIDEO_SIZE_MB: 100,
-  MAX_CAPTION_LENGTH: 2200,
-  MAX_COMMENT_LENGTH: 1000,
-  MAX_BIO_LENGTH: 150,
-  STORIES_DURATION_SECONDS: 5,
 } as const;

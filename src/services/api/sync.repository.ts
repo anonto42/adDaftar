@@ -46,23 +46,31 @@ export const syncRepository = {
    * Get all local changes since last sync
    */
   getLocalChanges: async (lastSyncAt: string | null) => {
-    const filter = lastSyncAt ? `WHERE updated_at > '${lastSyncAt}'` : '';
-    // For tables with created_at only, we use that if updated_at is missing
-    const filterCreated = lastSyncAt ? `WHERE created_at > '${lastSyncAt}'` : '';
-    
-    // Note: This assumes all tables have these columns. 
-    // We will ensure this in the schema update.
-    
+    const filter = lastSyncAt ? `WHERE updated_at > ?` : '';
+    const filterCreated = lastSyncAt ? `WHERE created_at > ?` : '';
+    const params = lastSyncAt ? [lastSyncAt] : [];
+
     return {
-      businesses: await executeQuery(`SELECT * FROM business ${filter}`),
-      categories: await executeQuery(`SELECT * FROM categories ${filter}`),
-      products: await executeQuery(`SELECT * FROM products ${filter}`),
-      customers: await executeQuery(`SELECT * FROM customers ${filter}`),
-      sales: await executeQuery(`SELECT * FROM sales ${filterCreated}`),
-      // saleItems: await executeQuery(`SELECT * FROM sale_items`), // sale_items don't have timestamps yet
-      paymentHistory: await executeQuery(`SELECT * FROM payment_history ${filterCreated}`),
-      expenses: await executeQuery(`SELECT * FROM expenses ${filter}`),
-      appSettings: await executeQuery(`SELECT * FROM app_settings ${filter}`),
+      businesses: await executeQuery(`SELECT * FROM business ${filter}`, params),
+      categories: await executeQuery(`SELECT * FROM categories ${filter}`, params),
+      products: await executeQuery(`SELECT * FROM products ${filter}`, params),
+      customers: await executeQuery(`SELECT * FROM customers ${filter}`, params),
+      sales: await executeQuery(`SELECT * FROM sales ${filterCreated}`, params),
+      saleItems: await executeQuery(`SELECT * FROM sale_items ${filter}`, params),
+      paymentHistory: await executeQuery(`SELECT * FROM payment_history ${filterCreated}`, params),
+      expenses: await executeQuery(`SELECT * FROM expenses ${filter}`, params),
+      appSettings: await executeQuery(`SELECT * FROM app_settings ${filter}`, params),
+    };
+  },
+
+  /**
+   * Export full local database snapshot for offline backup
+   */
+  exportAllData: async () => {
+    const data = await syncRepository.getLocalChanges(null);
+    return {
+      exportedAt: new Date().toISOString(),
+      ...data,
     };
   },
 
@@ -102,9 +110,30 @@ export const syncRepository = {
       if (changes.products) await upsertEntity('products', changes.products);
       if (changes.customers) await upsertEntity('customers', changes.customers);
       if (changes.sales) await upsertEntity('sales', changes.sales);
-      if (changes.saleItems) {
-         // sale_items uses AUTOINCREMENT id on frontend, but we should match on sale_id + product_id maybe?
-         // For now, let's just insert them. A better approach is needed for sale_items.
+      if (changes.saleItems && Array.isArray(changes.saleItems)) {
+        const syncedSaleIds = Array.from(
+          new Set(changes.saleItems.map((item: any) => item.sale_id).filter(Boolean))
+        ) as string[];
+        for (const saleId of syncedSaleIds) {
+          await executeStatement('DELETE FROM sale_items WHERE sale_id = ?', [saleId]);
+        }
+        for (const item of changes.saleItems) {
+          await executeStatement(
+            `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total, cost_price, profit, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              item.sale_id,
+              item.product_id,
+              item.product_name,
+              item.quantity,
+              item.unit_price,
+              item.total,
+              item.cost_price ?? 0,
+              item.profit ?? 0,
+              item.updated_at || new Date().toISOString(),
+            ]
+          );
+        }
       }
       if (changes.paymentHistory) await upsertEntity('payment_history', changes.paymentHistory);
       if (changes.expenses) await upsertEntity('expenses', changes.expenses);

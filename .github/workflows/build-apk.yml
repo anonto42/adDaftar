@@ -61,7 +61,7 @@ jobs:
 
       - name: Build Standalone Release APK with Gradle
         working-directory: android
-        run: ./gradlew assembleRelease -x lint -x test --no-daemon
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a -x lint -x test --no-daemon
 
       - name: Prepare APK file
         id: find-apk
